@@ -20,69 +20,19 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import sounddevice as sd
 import numpy as np
+from Signal import SignalGenerator
+from Slider import Slider
 
-class Signal:
-    def __init__(self, name):
-        self.name = name
-        self.data = []
-        self.time = []
-        self.sample_rate = None
-        self.freq_data = None
-        self.Ranges = []
-        self.phase = None
 
-class SmoothingWindow:
-    def __init__(self, window_type, amp,sigma=None):
-        self.window_type = window_type
-        self.amp = amp
-        self.sigma = sigma
-    def apply(self, signal):
-        if self.window_type == "Rectangular":
-            window = sg.windows.boxcar(len(signal))
-            smoothed_signal = self.amp * window 
-            return smoothed_signal
-        elif self.window_type == "Hamming":
-            window = sg.windows.hamming(len(signal))
-            smoothed_signal = self.amp * window
-            return smoothed_signal
-        elif self.window_type == "Hanning":
-            window = sg.windows.hann(len(signal))
-            smoothed_signal = self.amp * window
-            return smoothed_signal
-        elif self.window_type == "Gaussian":
-            if self.sigma is not None:
-            # Apply the Gaussian window to the signal with a specified standard deviation (sigma)
-                window = sg.windows.gaussian(len(signal),self.sigma)
-                smoothed_signal = self.amp * window
-                return smoothed_signal
-            else:
-                raise ValueError("Gaussian window requires parameters.")
-
-class CreateSlider:
-    def __init__(self , index ):
-        # Create a slider
-        self.index= index
-        self.slider = QSlider()
-        #sets the orientation of the slider to be vertical.
-        self.slider.setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.slider.setTickPosition(QSlider.TicksBothSides)
-        self.slider.setTickInterval(10)
-        self.slider.setSingleStep(1)
-        self.slider.setMinimum(0)
-        self.slider.setMaximum(20)
-        self.slider.setValue(10)
-        # self.sliderlabel.setText()
-    def get_slider(self):
-        return self.slider
     
 class EqualizerApp(QtWidgets.QMainWindow):    
     def __init__(self, *args, **kwargs):
         super(EqualizerApp, self).__init__(*args, **kwargs)
         # Load the UI Page
         uic.loadUi(r'task3.ui', self)
-        self.original_graph.setBackground("#ffff")
-        self.equalized_graph.setBackground("#ffff")
-        self.frequancy_graph.setBackground("#ffff")
+        self.original_graph.setBackground("#ffffff")
+        self.equalized_graph.setBackground("#ffffff")
+        self.frequancy_graph.setBackground("#ffffff")
         self.selected_mode = None
         self.selected_window = None
         self.frame_layout = QHBoxLayout(self.sliders_frame)
@@ -101,7 +51,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.current_speed = 1
         self.slider_gain = {}
         self.equalized_bool = False
-        self.time_eq_signal = Signal('EqSignalInTime')
+        self.time_eq_signal = SignalGenerator('EqSignalInTime')
         self.eqsignal = None
         self.sampling_rate = None
         self.line = pg.InfiniteLine(pos=0.1, angle=90, pen=None, movable=False)
@@ -114,12 +64,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
         }
         # Ui conection
         self.modes_combobox.activated.connect(lambda: self.combobox_activated())
-        self.smoothing_window_combobox.activated.connect(lambda: self.smoothing_window_combobox_activated())
         self.lineEdit_2.setVisible(False)  # Initially hide the line edit for Gaussian window
         self.load_btn.clicked.connect(lambda: self.load())
         self.hear_orig_btn.clicked.connect(lambda:self.playMusic('orig'))
         self.hear_eq_btn.clicked.connect(lambda:self.playMusic('equalized'))
-        self.apply_btn.clicked.connect(lambda: self.plot_freq_smoothing_window())
         self.play_pause_btn.clicked.connect(lambda: self.play_pause()) 
         self.replay_btn.clicked.connect(lambda: self.replay())
         self.zoom_in_btn.clicked.connect(lambda: self.zoom_in())
@@ -175,7 +123,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             else:
                 sample_rate=1
         # Create a Signal object and set its attributes
-        self.current_signal = Signal(signal_name)
+        self.current_signal = SignalGenerator(signal_name)
         self.current_signal.data = data
         self.current_signal.time = time
         self.current_signal.sample_rate = sample_rate 
@@ -240,38 +188,24 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 legend = graph.addLegend()
                 legend.addItem(plot_item, name=f"{signal.name}")
 
-    def plot_freq_smoothing_window (self):
-        signal = self.eqsignal if self.equalized_bool  else self.current_signal
-        #print(signal.Ranges)
+    def plot_freq(self):
+        signal = self.eqsignal if self.equalized_bool else self.current_signal
+
         if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             _, end_last_ind = signal.Ranges[-1]
-            #frequency domain
+            # Clear the frequency graph
             self.frequancy_graph.clear()
-            # Plot the original frequency data in white
+            
+            # Plot the original frequency data in blue
             self.frequancy_graph.plot(signal.freq_data[0][:end_last_ind],
-                    signal.freq_data[1][:end_last_ind],pen={'color': 'b'})
-            # Iterate through the frequency ranges and plot smoothed windows
+                                    signal.freq_data[1][:end_last_ind], pen={'color': 'b'})
+            
+            # Iterate through the frequency ranges and add vertical lines
             for i in range(len(signal.Ranges)):
-                if i!= len(signal.Ranges) :
-                    #print(signal.Ranges[i])
-                    start_ind,end_ind = signal.Ranges[i]
-                    # print(signal.Ranges[i])
-                    # Get smoothing window parameters
-                    windowtype = self.smoothing_window_combobox.currentText()
-                    # Convert sigma_text to integer if not empty, otherwise set a default value
-                    sigma_text = self.lineEdit_2.text()
-                    sigma = int(sigma_text) if sigma_text else 20  # Set a default value if the text is empty
-                    amp = max(signal.freq_data[1][start_ind:end_ind])
-                    # Apply the smoothing window
-                    smooth_window = SmoothingWindow(windowtype,amp,sigma)
-                    curr_smooth_window = smooth_window.apply(signal.freq_data[1][start_ind:end_ind])
-                    # print(len(signal.freq_data[0][start_ind:end_ind]))
-                    # print( len(curr_smooth_window))
-                    self.frequancy_graph.plot(signal.freq_data[0][start_ind:end_ind],
-                            curr_smooth_window,pen={'color': 'r', 'width': 2})
-                    start_line = signal.freq_data[0][start_ind]
-                    end_line = signal.freq_data[0][end_ind-1]
-                # Add a vertical line for the current position
+                start_ind, end_ind = signal.Ranges[i]
+                # Add vertical lines for the start and end of the range
+                start_line = signal.freq_data[0][start_ind]
+                end_line = signal.freq_data[0][end_ind - 1]
                 v_line_start = pg.InfiniteLine(pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
                 self.frequancy_graph.addItem(v_line_start)
                 v_line_end = pg.InfiniteLine(pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
@@ -420,7 +354,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         for i,(key,_ )in enumerate(dictinoary.items()):
             # print(f"Index: {i}, Key: {key}")
             label = QLabel(str(key))  # Create a label with a unique identifier
-            slider_creator = CreateSlider(i)
+            slider_creator = Slider(i)
             slider = slider_creator.get_slider()
             self.slider_gain[i] = 10
             slider.valueChanged.connect(lambda value, i=i: self.update_slider_value(i, value/10))
@@ -445,35 +379,38 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.equalized_graph.getViewBox().scaleBy((2, 2))
         print('zoomed out')
 
-    
-
-    def equalized(self, slider_index,value):
-        #print (value)
+        
+    def equalized(self, slider_index, value):
         self.equalized_bool = True
         self.time_eq_signal.time = self.current_signal.time
-        # Get smoothing window parameters
-        windowtype = self.smoothing_window_combobox.currentText()
-        # Convert sigma_text to integer if not empty, otherwise set a default value
-        sigma_text = self.lineEdit_2.text()
-        sigma = int(sigma_text) if sigma_text else 20  # Set a default value if the text is empty
-        start,end = self.current_signal.Ranges[slider_index]
-        # Apply the smoothing window
-        smooth_window = SmoothingWindow(windowtype,1,sigma)
-        curr_smooth_window = smooth_window.apply(self.current_signal.freq_data[1][start:end])
-        curr_smooth_window *= value
-        Amp = np.array(self.current_signal.freq_data[1][start:end])   
-        new_amp = Amp * curr_smooth_window
+        
+        start, end = self.current_signal.Ranges[slider_index]
+        
+        # Get the original amplitude data
+        Amp = np.array(self.current_signal.freq_data[1][start:end])
+        
+        # Scale the amplitude directly with the given value
+        new_amp = Amp * value
+        
+        # Update the equalized signal's frequency data
         self.eqsignal.freq_data[1][start:end] = new_amp
-        self.plot_freq_smoothing_window()
-        self.time_eq_signal.time = self.current_signal.time
+        
+        # Plot the frequency graph without smoothing
+        self.plot_freq()  # Ensure this method does not involve any smoothing logic
+        
+        # Update the time equalized signal
         self.time_eq_signal.data = self.recovered_signal(self.eqsignal.freq_data[1], self.current_signal.phase)
-        #print(len(self.time_eq_signal.data))
-        #print(len(self.time_eq_signal.time))
-        excess = len(self.time_eq_signal.time)-len(self.time_eq_signal.data)
+        
+        # Adjust the time signal length
+        excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data)
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
+        
+        # Plot the equalized signal
         self.Plot("equalized")
-        self.plot_spectrogram(self.time_eq_signal.data, self.current_signal.sample_rate , self.spectrogram_after)
-
+        
+        # Plot the spectrogram
+        self.plot_spectrogram(self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
+        
     def recovered_signal(self,Amp, phase):
         # complex array from amp and phase comination
         Amp = Amp * len(self.current_signal.data)/2 #N/2 as we get amp from foureir by multiplying it with fraction 2/N 
