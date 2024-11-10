@@ -33,8 +33,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.original_graph.setBackground("#ffffff")
         self.equalized_graph.setBackground("#ffffff")
         self.frequancy_graph.setBackground("#ffffff")
+
         self.selected_mode = None
-        self.selected_window = None
+        
         self.frame_layout = QHBoxLayout(self.sliders_frame)
         self.current_signal=None
         self.player = QMediaPlayer(None,QMediaPlayer.StreamPlayback)
@@ -161,9 +162,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if self.selected_mode == 'Uniform Range':
             self.current_signal.Ranges = [(i*self.batch_size,(i+1)*self.batch_size) for i in range(10)] 
         else: 
-            dict = self.dictionary[self.selected_mode]
+            dict_ = self.dictionary[self.selected_mode]
             # Calculate frequency indices for specified ranges
-            for  _, (start,end) in dict.items():
+            for  _, (start,end) in dict_.items():
                 start_ind = bisect.bisect_left(freq, start)
                 end_ind = bisect.bisect_right(freq, end) - 1  # Adjusted for inclusive end index
                 self.current_signal.Ranges.append((start_ind, end_ind))
@@ -329,17 +330,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
-        selected_index = self.modes_combobox.currentIndex()
+        # selected_index = self.modes_combobox.currentIndex()
         self.selected_mode = self.modes_combobox.currentText()
         # store the mode in a global variable 
-        self.add_slider(self.selected_mode)
+        self.add_slider()
         self.Range_spliting()
-
-    def smoothing_window_combobox_activated(self):
-        selected_item = self.smoothing_window_combobox.currentText()
-        self.selected_window = selected_item
-        # Show or hide the line edit based on the selected smoothing window
-        self.lineEdit_2.setVisible(selected_item == 'Gaussian')
 
     def clear_layout(self ,layout):
         for i in reversed(range(layout.count())):
@@ -347,9 +342,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
             if item.widget():
                 item.widget().deleteLater() 
 
-    def add_slider(self, selected_index):          
+    def add_slider(self):          
         self.clear_layout(self.frame_layout) 
-        dictinoary = self.dictionary[selected_index]
+        dictinoary = self.dictionary[self.selected_mode]
         for i,(key,_ )in enumerate(dictinoary.items()):
             # print(f"Index: {i}, Key: {key}")
             label = QLabel(str(key))  # Create a label with a unique identifier
