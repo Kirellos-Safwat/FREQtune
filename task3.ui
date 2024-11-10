@@ -438,67 +438,6 @@ QComboBox QAbstractItemView {
              </property>
             </spacer>
            </item>
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout_5">
-             <item>
-              <widget class="QLabel" name="label_7">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>12</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">color: black
-;</string>
-               </property>
-              </widget>
-             </item>
-
-             <item>
-              <widget class="QLineEdit" name="lineEdit_2">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="sizeIncrement">
-                <size>
-                 <width>0</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">color: black
-;</string>
-               </property>
-               <property name="placeholderText">
-                <string>Enter Std Value</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
           </layout>
          </item>
         </layout>
@@ -1057,6 +996,5 @@ QSlider::add-page:horizontal:disabled, QSlider::sub-page:horizontal:disabled, QS
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
- </connections>
+ <connections/>
 </ui>

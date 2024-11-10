@@ -64,7 +64,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
         }
         # Ui conection
         self.modes_combobox.activated.connect(lambda: self.combobox_activated())
-        self.lineEdit_2.setVisible(False)  # Initially hide the line edit for Gaussian window
         self.load_btn.clicked.connect(lambda: self.load())
         self.hear_orig_btn.clicked.connect(lambda:self.playMusic('orig'))
         self.hear_eq_btn.clicked.connect(lambda:self.playMusic('equalized'))
