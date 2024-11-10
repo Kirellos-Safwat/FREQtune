@@ -438,8 +438,6 @@ QComboBox QAbstractItemView {
              </property>
             </spacer>
            </item>
-<<<<<<< HEAD
-=======
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <item>
@@ -619,7 +617,6 @@ color:#34455e;
              </item>
             </layout>
            </item>
->>>>>>> 591a398dc35f5f8efeb38947156e6c6358b1c6c6
           </layout>
          </item>
         </layout>
@@ -1178,10 +1175,6 @@ QSlider::add-page:horizontal:disabled, QSlider::sub-page:horizontal:disabled, QS
   </customwidget>
  </customwidgets>
  <resources/>
-<<<<<<< HEAD
- <connections/>
-</ui>
-=======
  <connections>
   <connection>
    <sender>lineEdit_2</sender>
@@ -1201,4 +1194,3 @@ QSlider::add-page:horizontal:disabled, QSlider::sub-page:horizontal:disabled, QS
   </connection>
  </connections>
 </ui>
->>>>>>> 591a398dc35f5f8efeb38947156e6c6358b1c6c6
