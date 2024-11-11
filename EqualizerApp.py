@@ -513,7 +513,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 # Resume equalized audio from stored position
                 adjusted_samplerate = int(self.current_signal.sample_rate * self.current_speed)
 
-                start_sample = int(self.equalized_position * self.current_signal.sample_rate)
+                start_sample = int(self.equalized_position * self.current_signal.sample_rate / self.current_speed)
+                sd.stop()
                 sd.play(self.time_eq_signal.data[start_sample:], samplerate=adjusted_samplerate, blocking=False)
                 self.player.play()
 
