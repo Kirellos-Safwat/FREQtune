@@ -298,7 +298,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.line_position = 0
         self.player.setPlaybackRate(self.current_speed)
         media = QMediaContent(QUrl.fromLocalFile(self.audio_data))
-        #set media content for player and start playing
+        # Set the media content for the player and start playing
         self.player.setMedia(media)
         self.type = type
         if type == 'orig':
@@ -309,8 +309,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
             # Create a QMediaContent object from the local audio file
             self.player.play()
             self.player.setVolume(100)
-            self.updateLinePosition()  # Update both graphs (linked)
-
             # Add a vertical line to the original graph
             self.equalized_graph.removeItem(self.line)
             self.original_graph.addItem(self.line)
@@ -321,12 +319,13 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.timer.start()
             self.player.play()
             self.player.setVolume(0)
-            self.updateLinePosition()  # Update both graphs (linked)
             self.original_graph.removeItem(self.line)
             self.equalized_graph.addItem(self.line)
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, blocking=False)
             self.player.play()
                         
+
+
     def updatepos(self):
             max_x = self.original_graph.getViewBox().viewRange()[0][1]
             graphs = [self.original_graph, self.equalized_graph]
@@ -376,7 +375,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
-        # selected_index = self.modes_combobox.currentIndex()
+        selected_index = self.modes_combobox.currentIndex()
         self.selected_mode = self.modes_combobox.currentText()
         # store the mode in a global variable 
         self.add_slider()
@@ -390,7 +389,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def add_slider(self):          
         self.clear_layout(self.frame_layout) 
-        dictionary = self.dictionary[selected_index]
+        dictionary = self.dictionary[self.selected_mode]
         for i,(key,_ )in enumerate(dictionary.items()):
             # print(f"Index: {i}, Key: {key}")
             label = QLabel(str(key))  # Create a label with a unique identifier
