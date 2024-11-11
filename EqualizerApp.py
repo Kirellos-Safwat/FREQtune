@@ -216,7 +216,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             Duration = librosa.get_duration(y=data, sr=sample_rate)
             self.duration = Duration
             time = np.linspace(0, Duration, len(data))
-            self.audio_data = path
+            self.audio_path = path
         elif type == "csv":
             data_of_signal = pd.read_csv(path)  
             time = np.array(data_of_signal.iloc[:,0].astype(float).tolist())
@@ -379,10 +379,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.equalized_graph.removeItem(self.line)
             self.original_graph.addItem(self.line)
             
-            self.timer.start()
-
         else:
-            
             # Stop original audio if it's playing
             self.timer.start()
             self.player.play()
@@ -397,9 +394,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, blocking=False)
             
-            self.timer.start()
-
-
+        self.timer.start()    
                         
     def updatepos(self):
         max_x = self.original_graph.getViewBox().viewRange()[0][1]
@@ -467,6 +462,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 self.is_playing = False
                 self.play_pause_btn.setText("Play")
                 self.timer.stop()  # Stop updating position
+                
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
         # selected_index = self.modes_combobox.currentIndex()
