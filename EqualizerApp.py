@@ -366,14 +366,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.playMusic('orig')
         else: self.playMusic('equalized')
 
-    def zoom_in(self):
-        self.original_graph.getViewBox().scaleBy((0.5, 0.5))
-        self.equalized_graph.getViewBox().scaleBy((0.5, 0.5))
-
-    def zoom_out(self):
-        self.original_graph.getViewBox().scaleBy((2, 2))
-        self.equalized_graph.getViewBox().scaleBy((2, 2))
-
     def play_pause(self):
         if self.is_playing:
             # Pause the audio
