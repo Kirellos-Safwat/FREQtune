@@ -246,8 +246,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
         self.eqsignal = copy.deepcopy(self.current_signal) #makes deep copy of current_signal and store it in eqsignal to preserve original signal for later processing
 
-        self.combobox_activated()
-
     def get_Fourier(self, T, data):
         N=len(data)  #bec FFT depends on #data_points in signal
         freq_amp= np.fft.fft(data) #freq_amp will contain real and img parts which will be used to get magnitude & phase
@@ -299,9 +297,19 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
             self.frequency_graph.clear()
             
+            weights = self.a_weighting(signal.freq_data[0][:end_last_ind])
+
+            weighted_fft_signal = np.zeros_like(signal.freq_data[1][:end_last_ind])
+            # Apply weights to the positive frequencies
+            weighted_fft_signal[:len(signal.freq_data[0][:end_last_ind])] = signal.freq_data[1][:end_last_ind][:len(signal.freq_data[0][:end_last_ind])] * weights
+            weighted_fft_signal[-len(signal.freq_data[0][:end_last_ind]):] = signal.freq_data[1][:end_last_ind][-len(signal.freq_data[0][:end_last_ind]):] * weights[::-1]
+
             #plot original frequency data
             self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],                   # array of freqs
-                                    signal.freq_data[1][:end_last_ind], pen={'color': 'b'}) # array of corresponding magnitudes
+                                    weighted_fft_signal, pen={'color': 'b'}) # array of corresponding magnitudes
+
+            # self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],              # array of freqs
+            #                         signal.freq_data[1][:end_last_ind], pen={'color': 'b'})
             
             # Iterate through the frequency ranges and add vertical lines
             for i in range(len(signal.Ranges)):
@@ -313,6 +321,24 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 self.frequency_graph.addItem(v_line_start)
                 v_line_end = pg.InfiniteLine(pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
                 self.frequency_graph.addItem(v_line_end)
+
+    def a_weighting(self, frequencies):
+        """
+        A-weighting formula (ITU-R 468-4) with normalization to avoid global amplification.
+        """
+        f_squared = frequencies ** 2
+        numerator = 12194 ** 2 * f_squared ** 2
+        denominator = (f_squared + 20.6 ** 2) * np.sqrt(f_squared + 107.7 ** 2) * (f_squared + 737.9 ** 2) * (f_squared + 12194 ** 2)
+        
+        # Normalize to avoid global amplification
+        weighting = numerator / denominator
+
+        # Normalization
+        max_weighting = np.max(weighting)
+        normalized_weighting = weighting / max_weighting
+        
+        return normalized_weighting
+
 
     def plot_spectrogram(self, samples, sampling_rate , widget):
         if widget.count() > 0:
