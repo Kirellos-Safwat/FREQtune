@@ -402,8 +402,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def add_slider(self):          
         self.clear_layout(self.frame_layout) 
-        dictinoary = self.dictionary[self.selected_mode]
-        for i,(key,_ )in enumerate(dictinoary.items()):
+        dictionary = self.dictionary[self.selected_mode]
+        for i,(key,_ )in enumerate(dictionary.items()):
             # print(f"Index: {i}, Key: {key}")
             label = QLabel(str(key))  # Create a label with a unique identifier
             slider_creator = Slider(i)
