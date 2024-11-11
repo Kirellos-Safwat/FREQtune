@@ -103,7 +103,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda : self.hide())
         self.dictionary = {
             'Uniform Range':{},
-            'Musical Instruments': {"Guitar": [40,400],
+            'Musical Instruments': {"Guitar": [[40, 200], [200, 400]],
                                 "Flute": [400, 800],
                                 "Violin ": [950, 4000],
                                 "Xylophone": [5000, 14000]
@@ -200,40 +200,47 @@ class EqualizerApp(QtWidgets.QMainWindow):
         path_info = QtWidgets.QFileDialog.getOpenFileName(
             None, "Select a signal...",os.getenv('HOME'), filter="Raw Data (*.csv *.wav *.mp3)")
         path = path_info[0] #actual file path is 1st element of tuple
-
+        time = []
+        time = []
         self.equalized_bool = False #signal isn't equalized yet
         sample_rate = 0
         data = [] #empty list where signal data is to be stored later 
 
         signal_name = path.split('/')[-1].split('.')[0]   #get signal name from file path
-        type_ = path.split('.')[-1] #get extension
+        type = path.split('.')[-1] #get extension
         #check file type and load data accordingly
 
         #if it is an audio
-        if type_ in ["wav", "mp3"]:
+        if type in ["wav", "mp3"]:
             data, sample_rate = librosa.load(path)
             Duration = librosa.get_duration(y=data, sr=sample_rate)
+            self.duration = Duration
             time = np.linspace(0, Duration, len(data))
             self.audio_path = path
-        elif type_ == "csv":
-            signal_data = pd.read_csv(path)  
-            time = np.array(signal_data.iloc[:,0].astype(float).tolist())
-            data = np.array(signal_data.iloc[:,1].astype(float).tolist())
+        elif type == "csv":
+            data_of_signal = pd.read_csv(path)  
+            time = np.array(data_of_signal.iloc[:,0].astype(float).tolist())
+            data = np.array(data_of_signal.iloc[:,1].astype(float).tolist())
             if len(time) > 1:
                 sample_rate = 1 /( time[1]-time[0])
             else:
                 sample_rate=1
         # Create a Signal object and set its attributes
-        self.current_signal = SignalGenerator(signal_name, data=data, 
-                    time=time, sample_rate=sample_rate)
+        self.current_signal = SignalGenerator(signal_name)
+        self.current_signal.data = data
+        self.current_signal.time = time
+        self.current_signal.sample_rate = sample_rate 
+        self.sampling_rate = sample_rate
+
+
         #calc & set the FT of signal
-        T = 1 / sample_rate  #calc period
-        frequency_axis, amplitude_axis = self.get_Fourier(T, data)
-        self.current_signal.freq_data = [frequency_axis, amplitude_axis]
+        T = 1 / self.current_signal.sample_rate  #calc period
+        x_data, y_data = self.get_Fourier(T, self.current_signal.data)  #x_data: freq , y_data: amp
+        self.current_signal.freq_data = [x_data, y_data]
 
         #UNIFORM MODE:
-        self.batch_size = len(frequency_axis)//10
         for i in range(10): #divide freq into 10 equal ranges
+            self.batch_size = len(self.current_signal.freq_data[0])//10  #batch_sz = len(freqdata)/10
             self.dictionary['Uniform Range'][i] = [i*self.batch_size,(i+1)*self.batch_size]   #store ranges in dictionary
 
         self.frequency_graph.clear()
@@ -242,8 +249,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
         self.Plot("original")
         self.plot_spectrogram(data, sample_rate , self.spectrogram_before)
-        self.frequency_graph.plot(frequency_axis, amplitude_axis,pen={'color': 'b'})
-
+        self.frequency_graph.plot(self.current_signal.freq_data[0],
+                    self.current_signal.freq_data[1],pen={'color': 'b'})
         self.eqsignal = copy.deepcopy(self.current_signal) #makes deep copy of current_signal and store it in eqsignal to preserve original signal for later processing
 
     def get_Fourier(self, T, data):
@@ -265,10 +272,20 @@ class EqualizerApp(QtWidgets.QMainWindow):
         else: 
             dict_ = self.dictionary[self.selected_mode] #get freq range for selected mode
             #calculate frequency indices for specified ranges
-            for  _, (start,end) in dict_.items(): #key:_ , val : (s,e)
-                start_ind = bisect.bisect_left(freq, start) #get index of 1st freq >= start_val
-                end_ind = bisect.bisect_right(freq, end) - 1  #get index of 1st freq =< end_val
-                self.current_signal.Ranges.append((start_ind, end_ind)) #append calculated range corresponding to specific freq. range in signal
+            for _, range_ in dict_.items():  # range_ can now be a list of ranges
+                if isinstance(range_[0], list):  # Check if it's a list of ranges (like Guitar)
+                    # Handle cases where there are multiple ranges, like for "Guitar"
+                    for subrange in range_:
+                        start, end = subrange
+                        start_ind = bisect.bisect_left(freq, start)  # get index of 1st freq >= start_val
+                        end_ind = bisect.bisect_right(freq, end) - 1  # get index of 1st freq <= end_val
+                        self.current_signal.Ranges.append((start_ind, end_ind))  # append calculated range
+                else:
+                    # Handle the case where it's a single range
+                    start, end = range_
+                    start_ind = bisect.bisect_left(freq, start)  # get index of 1st freq >= start_val
+                    end_ind = bisect.bisect_right(freq, end) - 1  # get index of 1st freq <= end_val
+                    self.current_signal.Ranges.append((start_ind, end_ind))  # append calculated range
         self.eqsignal.Ranges = copy.deepcopy(self.current_signal.Ranges) #get indpenedent copy of range and store it in processed signal
 
 
@@ -390,10 +407,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.equalized_graph.removeItem(self.line)
             self.original_graph.addItem(self.line)
             
-            self.timer.start()
-
         else:
-            
             # Stop original audio if it's playing
             self.timer.start()
             self.player.play()
@@ -408,9 +422,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, blocking=False)
             
-            self.timer.start()
-
-
+        self.timer.start()    
                         
     def updatepos(self):
         max_x = self.original_graph.getViewBox().viewRange()[0][1]
@@ -478,6 +490,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 self.is_playing = False
                 self.play_pause_btn.setText("Play")
                 self.timer.stop()  # Stop updating position
+                
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
         # selected_index = self.modes_combobox.currentIndex()
