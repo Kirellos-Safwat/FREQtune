@@ -221,9 +221,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if self.selected_mode == 'Uniform Range':
             self.current_signal.Ranges = [(i*self.batch_size,(i+1)*self.batch_size) for i in range(10)]  #divide range into 10 ranges
         else: 
-            dict = self.dictionary[self.selected_mode] #get freq range for selected mode
+            dict_ = self.dictionary[self.selected_mode] #get freq range for selected mode
             #calculate frequency indices for specified ranges
-            for  _, (start,end) in dict.items(): #key:_ , val : (s,e)
+            for  _, (start,end) in dict_.items(): #key:_ , val : (s,e)
                 start_ind = bisect.bisect_left(freq, start) #get index of 1st freq >= start_val
                 end_ind = bisect.bisect_right(freq, end) - 1  #get index of 1st freq =< end_val
                 self.current_signal.Ranges.append((start_ind, end_ind)) #append calculated range corresponding to specific freq. range in signal
@@ -376,10 +376,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
-        selected_index = self.modes_combobox.currentIndex()
+        # selected_index = self.modes_combobox.currentIndex()
         self.selected_mode = self.modes_combobox.currentText()
         # store the mode in a global variable 
-        self.add_slider(self.selected_mode)
+        self.add_slider()
         self.Range_spliting()
 
     def clear_layout(self ,layout):
@@ -388,7 +388,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             if item.widget():
                 item.widget().deleteLater() 
 
-    def add_slider(self, selected_index):          
+    def add_slider(self):          
         self.clear_layout(self.frame_layout) 
         dictionary = self.dictionary[selected_index]
         for i,(key,_ )in enumerate(dictionary.items()):
