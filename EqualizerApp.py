@@ -129,6 +129,14 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if delta > 0:
             scale_factor = 1 / zoom_factor  # Zooming in
         else:
+            scale_factor = 0.5
+            original_view_range = self.original_graph.getViewBox().viewRange()
+            current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+            signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+            new_x_min = current_x_min - (current_x_min * scale_factor)
+            new_x_max = current_x_max - (current_x_max * scale_factor)
+            if new_x_min < 0 or new_x_max > signal_length:
+                return
             scale_factor = zoom_factor  # Zooming out
         
         # Apply scaling to both graphs
@@ -416,13 +424,19 @@ class EqualizerApp(QtWidgets.QMainWindow):
         for graph in [self.original_graph, self.equalized_graph]:
             graph.getViewBox().scaleBy((0.9, 0.9))
         self.sync_range()  # Sync ranges after zooming
-        print('zoomed in')
 
     def zoom_out(self):
+        scale_factor = 0.5
+        original_view_range = self.original_graph.getViewBox().viewRange()
+        current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+        signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+        new_x_min = current_x_min - (current_x_min * scale_factor)
+        new_x_max = current_x_max - (current_x_max * scale_factor)
+        if new_x_min < 0 or new_x_max > signal_length:
+            return
         for graph in [self.original_graph, self.equalized_graph]:
             graph.getViewBox().scaleBy((1.1, 1.1))
         self.sync_range()  # Sync ranges after zooming
-        print('zoomed out')
 
     def pan(self, delta_x, delta_y):
         # Define a scaling factor for panning
