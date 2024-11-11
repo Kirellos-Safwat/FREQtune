@@ -121,6 +121,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
         }
 
     def zoom_graph(self, event):
+        if self.current_signal is None:
+            return
+
         # Define zoom step (how much to zoom in or out per wheel movement)
         zoom_factor = 1.1  # Zoom factor for each wheel scroll
         delta = event.angleDelta().y()  # Get wheel movement direction
@@ -132,11 +135,32 @@ class EqualizerApp(QtWidgets.QMainWindow):
             scale_factor = 0.5
             original_view_range = self.original_graph.getViewBox().viewRange()
             current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+            current_y_min, current_y_max = original_view_range[1]
+
+            if len(self.current_signal.time) == 0:
+                return  # If the signal doesn't have any time data, do nothing
+
             signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+
+            signal_y_min = np.min(self.current_signal.data)
+            signal_y_max = np.max(self.current_signal.data)
+            
             new_x_min = current_x_min - (current_x_min * scale_factor)
             new_x_max = current_x_max - (current_x_max * scale_factor)
+
+            new_y_min = current_y_min + (current_y_min * scale_factor)
+            new_y_max = current_y_max + (current_y_max * scale_factor)
+
             if new_x_min < 0 or new_x_max > signal_length:
                 return
+            
+            if new_y_min < signal_y_min:
+                new_y_min = signal_y_min
+            if new_y_max > signal_y_max:
+                new_y_max = signal_y_max
+
+            self.original_graph.getViewBox().setYRange(new_y_min, new_y_max)
+
             scale_factor = zoom_factor  # Zooming out
         
         # Apply scaling to both graphs
@@ -468,33 +492,79 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.sync_range()  # Sync ranges after zooming
 
     def zoom_out(self):
+        if self.current_signal is None:
+            return
+
         scale_factor = 0.5
+
         original_view_range = self.original_graph.getViewBox().viewRange()
         current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+        current_y_min, current_y_max = original_view_range[1]
+
+        if len(self.current_signal.time) == 0:
+            return  # If the signal doesn't have any time data, do nothing
+
         signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+
+        signal_y_min = np.min(self.current_signal.data)
+        signal_y_max = np.max(self.current_signal.data)
+
         new_x_min = current_x_min - (current_x_min * scale_factor)
         new_x_max = current_x_max - (current_x_max * scale_factor)
+
+        new_y_min = current_y_min + (current_y_min * scale_factor)
+        new_y_max = current_y_max + (current_y_max * scale_factor)
+
         if new_x_min < 0 or new_x_max > signal_length:
             return
+        
+        if new_y_min < signal_y_min:
+            new_y_min = signal_y_min
+        if new_y_max > signal_y_max:
+            new_y_max = signal_y_max
+
+        self.original_graph.getViewBox().setYRange(new_y_min, new_y_max)
+        
         for graph in [self.original_graph, self.equalized_graph]:
             graph.getViewBox().scaleBy((1.1, 1.1))
         self.sync_range()  # Sync ranges after zooming
 
     def pan(self, delta_x, delta_y):
+        if self.current_signal is None:
+            return  # Don't do anything if current_signal is not set
+            
         # Define a scaling factor for panning
         pan_scale = 0.005  # Adjust this value to change the sensitivity of panning
 
         # Get the current visible range of the original graph
         original_view_range = self.original_graph.getViewBox().viewRange()
         current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+        current_y_min, current_y_max = original_view_range[1]
+
+        if len(self.current_signal.time) == 0:
+            return  # If the signal doesn't have any time data, do nothing
 
         signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+
+        signal_y_min = np.min(self.current_signal.data)
+        signal_y_max = np.max(self.current_signal.data)
 
         # Calculate the new x-axis range after applying panning (delta_x)
         new_x_min = current_x_min - (delta_x * pan_scale)
         new_x_max = current_x_max - (delta_x * pan_scale)
+
+        new_y_min = current_y_min - (delta_y * pan_scale)
+        new_y_max = current_y_max - (delta_y * pan_scale)
+
         if new_x_min < 0 or new_x_max > signal_length:
-            return
+            return # don't pan
+
+        if new_y_min < signal_y_min:
+            new_y_min = signal_y_min
+        if new_y_max > signal_y_max:
+            new_y_max = signal_y_max
+
+        self.original_graph.getViewBox().setYRange(new_y_min, new_y_max)
 
         # Apply the panning to both graphs using translateBy
         for graph in [self.original_graph, self.equalized_graph]:
