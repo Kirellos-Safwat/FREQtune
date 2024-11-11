@@ -85,8 +85,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             'before': self.spectrogram_before,
             'after': self.spectrogram_after
         }
-
-        #UI conections
+        # Ui conection
         self.modes_combobox.activated.connect(lambda: self.combobox_activated())
         self.load_btn.clicked.connect(lambda: self.load())
         self.hear_orig_btn.clicked.connect(lambda:self.playMusic('orig'))
@@ -95,8 +94,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.replay_btn.clicked.connect(lambda: self.replay())
         self.zoom_in_btn.clicked.connect(lambda: self.zoom_in())
         self.zoom_out_btn.clicked.connect(lambda: self.zoom_out())
-        self.speed_up_btn.clicked.connect(lambda: self.speed_up()) 
-        self.speed_down_btn.clicked.connect(lambda: self.speed_down())  
+        self.speed_up_btn.clicked.connect(lambda: self.update_speed(1)) 
+        self.speed_down_btn.clicked.connect(lambda: self.update_speed(-1))  
         self.checkBox.stateChanged.connect(lambda : self.hide())
         self.dictionary = {
             'Uniform Range':{},
@@ -148,6 +147,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             None, "Select a signal...",os.getenv('HOME'), filter="Raw Data (*.csv *.wav *.mp3)")
         path = path_info[0] #actual file path is 1st element of tuple
         time = []
+        time = []
         self.equalized_bool = False #signal isn't equalized yet
         sample_rate = 0
         data = [] #empty list where signal data is to be stored later 
@@ -163,19 +163,15 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.duration = Duration
             time = np.linspace(0, Duration, len(data))
             self.audio_data = path
-
-        #if it is a signal
         elif type == "csv":
             data_of_signal = pd.read_csv(path)  
-            time = np.array(data_of_signal.iloc[:,0].astype(float).tolist()) #get time values from 1st column of CSV and put them into float array
-            data = np.array(data_of_signal.iloc[:,1].astype(float).tolist()) #get signal data from 2nd column os CSV and put them into float array
+            time = np.array(data_of_signal.iloc[:,0].astype(float).tolist())
+            data = np.array(data_of_signal.iloc[:,1].astype(float).tolist())
             if len(time) > 1:
-                sample_rate = 1 /( time[1]-time[0]) #calc sample rate
-                #sample_rate = 1 /(time[1]-time[0])
+                sample_rate = 1 /( time[1]-time[0])
             else:
                 sample_rate=1
-
-        #create SignalGenerator instance and set its attributes
+        # Create a Signal object and set its attributes
         self.current_signal = SignalGenerator(signal_name)
         self.current_signal.data = data
         self.current_signal.time = time
@@ -231,17 +227,16 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
 
     def Plot(self, graph):
-            signal= self.time_eq_signal if self.equalized_bool else self.current_signal #which signal is to be plotted
+            signal= self.time_eq_signal if self.equalized_bool else self.current_signal
             if signal:
                 #time domain 
                 self.equalized_graph.clear()
-                graphs = [self.original_graph, self.equalized_graph] #list containing two graphs (original - equalized) 
-                graph = graphs[0] if graph == "original" else graphs[1]                 
+                graph = self.original_graph if graph == "original" else self.equalized_graph              
                 graph.clear()
                 graph.setLabel('left', "Amplitude")
                 graph.setLabel('bottom', "Time")
                 plot_item = graph.plot(
-                    signal.time, signal.data, name=f"{signal.name}") #plot signal using time & data values
+                    signal.time, signal.data, name=f"{signal.name}")
                 # Add legend to the graph
                 if graph.plotItem.legend is not None:
                     graph.plotItem.legend.clear()
@@ -251,7 +246,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def plot_freq(self):
         signal = self.eqsignal if self.equalized_bool else self.current_signal
 
-        if signal and signal.Ranges: 
+        if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             _, end_last_ind = signal.Ranges[-1] #get end index of last frequency range to know when to stop plotting
 
             self.frequency_graph.clear()
@@ -260,9 +255,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],                   # array of freqs
                                     signal.freq_data[1][:end_last_ind], pen={'color': 'b'}) # array of corresponding magnitudes
             
+            # Iterate through the frequency ranges and add vertical lines
             for i in range(len(signal.Ranges)):
                 start_ind, end_ind = signal.Ranges[i]
-                #add vertical lines for start & end of each range
+                # Add vertical lines for the start and end of the range
                 start_line = signal.freq_data[0][start_ind]
                 end_line = signal.freq_data[0][end_ind - 1]
                 v_line_start = pg.InfiniteLine(pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
@@ -293,15 +289,15 @@ class EqualizerApp(QtWidgets.QMainWindow):
         canvas = FigureCanvas(fig)
         widget.addWidget(canvas)
 
-    def playMusic(self, type):
+    def playMusic(self, type_):
         self.current_speed = 1
         self.line_position = 0
         self.player.setPlaybackRate(self.current_speed)
         media = QMediaContent(QUrl.fromLocalFile(self.audio_data))
         # Set the media content for the player and start playing
         self.player.setMedia(media)
-        self.type = type
-        if type == 'orig':
+        self.type = type_
+        if type_ == 'orig':
             sd.stop()
             self.timer.stop()
             self.changed_orig = True
@@ -324,42 +320,37 @@ class EqualizerApp(QtWidgets.QMainWindow):
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, blocking=False)
             self.player.play()
                         
-
-
     def updatepos(self):
             max_x = self.original_graph.getViewBox().viewRange()[0][1]
-            graphs = [self.original_graph, self.equalized_graph]
-            graph = graphs[0] if self.changed_orig  else graphs[1]
+            graph = self.original_graph if self.changed_orig  else self.equalized_graph
         # Get the current position in milliseconds
             position = self.player.position()/1000
             # Update the line position based on the current position
             self.line_position = position 
             max_x = graph.getViewBox().viewRange()[0][1]
-            #print(position)
-            if self.line_position > max_x:
-                self.line_position = max_x
-            #self.line_position = position
+            
+            self.line_position = position
             self.line.setPos(self.line_position)
         
-    def speed_up(self):
+    def update_speed(self, direction):
         # Increase the playback speed
-        self.current_speed = self.current_speed * 2  # You can adjust the increment as needed
+        self.current_speed += 0.1 * direction  
         self.player.setPlaybackRate(self.current_speed)
-        if self.changed_eq :
+        if self.changed_eq:
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, speed = self.current_speed, volume = 1.0 )
-        #print(self.current_speed)
 
-    def speed_down(self):
-        # Decrease the playback speed
-        self.current_speed = self.current_speed / 2  # You can adjust the increment as needed
-        new_speed = max(0.1, self.current_speed / 2)  # Ensure speed doesn't go below 0.1
-        self.player.setPlaybackRate(new_speed)
-        if self.changed_eq :
-            sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, speed = self.current_speed, volume = 1.0 )
-        #print(new_speed)
+    def replay(self):
+        if self.type == 'orig':
+            self.playMusic('orig')
+        else: self.playMusic('equalized')
 
-    def replay (self):
-        self.playMusic('orig' if self.type == 'orig' else 'equalized')
+    def zoom_in(self):
+        self.original_graph.getViewBox().scaleBy((0.5, 0.5))
+        self.equalized_graph.getViewBox().scaleBy((0.5, 0.5))
+
+    def zoom_out(self):
+        self.original_graph.getViewBox().scaleBy((2, 2))
+        self.equalized_graph.getViewBox().scaleBy((2, 2))
 
     def play_pause(self):
         if self.is_playing:
@@ -375,7 +366,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
-        selected_index = self.modes_combobox.currentIndex()
+        # selected_index = self.modes_combobox.currentIndex()
         self.selected_mode = self.modes_combobox.currentText()
         # store the mode in a global variable 
         self.add_slider()
@@ -389,8 +380,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def add_slider(self):          
         self.clear_layout(self.frame_layout) 
-        dictionary = self.dictionary[self.selected_mode]
-        for i,(key,_ )in enumerate(dictionary.items()):
+        dictinoary = self.dictionary[self.selected_mode]
+        for i,(key,_ )in enumerate(dictinoary.items()):
             # print(f"Index: {i}, Key: {key}")
             label = QLabel(str(key))  # Create a label with a unique identifier
             slider_creator = Slider(i)
