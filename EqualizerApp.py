@@ -395,14 +395,14 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def play_pause(self):
         if self.is_playing:
             # Pause the audio
-            self.audio_player.pause()  # Assuming you have an audio player object
+            self.player.pause()  # Assuming you have an audio player object
             self.is_playing = False
-            self.play_pause_button.setText("Play")  # Change the button text to "Play"
+            self.play_pause_btn.setText("Play")  # Change the button text to "Play"
         else:
             # Start playing the audio
-            self.audio_player.play()  # Assuming you have an audio player object
+            self.player.play()  # Assuming you have an audio player object
             self.is_playing = True
-            self.play_pause_button.setText("Pause")  # Change the button text to "Pause"
+            self.play_pause_btn.setText("Pause")  # Change the button text to "Pause"
 
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
