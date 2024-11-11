@@ -103,7 +103,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda : self.hide())
         self.dictionary = {
             'Uniform Range':{},
-            'Musical Instruments': {"Guitar": [40,400],
+            'Musical Instruments': {"Guitar": [[40, 200], [200, 400]],
                                 "Flute": [400, 800],
                                 "Violin ": [950, 4000],
                                 "Xylophone": [5000, 14000]
@@ -267,10 +267,20 @@ class EqualizerApp(QtWidgets.QMainWindow):
         else: 
             dict_ = self.dictionary[self.selected_mode] #get freq range for selected mode
             #calculate frequency indices for specified ranges
-            for  _, (start,end) in dict_.items(): #key:_ , val : (s,e)
-                start_ind = bisect.bisect_left(freq, start) #get index of 1st freq >= start_val
-                end_ind = bisect.bisect_right(freq, end) - 1  #get index of 1st freq =< end_val
-                self.current_signal.Ranges.append((start_ind, end_ind)) #append calculated range corresponding to specific freq. range in signal
+            for _, range_ in dict_.items():  # range_ can now be a list of ranges
+                if isinstance(range_[0], list):  # Check if it's a list of ranges (like Guitar)
+                    # Handle cases where there are multiple ranges, like for "Guitar"
+                    for subrange in range_:
+                        start, end = subrange
+                        start_ind = bisect.bisect_left(freq, start)  # get index of 1st freq >= start_val
+                        end_ind = bisect.bisect_right(freq, end) - 1  # get index of 1st freq <= end_val
+                        self.current_signal.Ranges.append((start_ind, end_ind))  # append calculated range
+                else:
+                    # Handle the case where it's a single range
+                    start, end = range_
+                    start_ind = bisect.bisect_left(freq, start)  # get index of 1st freq >= start_val
+                    end_ind = bisect.bisect_right(freq, end) - 1  # get index of 1st freq <= end_val
+                    self.current_signal.Ranges.append((start_ind, end_ind))  # append calculated range
         self.eqsignal.Ranges = copy.deepcopy(self.current_signal.Ranges) #get indpenedent copy of range and store it in processed signal
 
 
