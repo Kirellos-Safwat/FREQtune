@@ -317,69 +317,117 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.current_speed = 1
         self.line_position = 0
         self.player.setPlaybackRate(self.current_speed)
-        media = QMediaContent(QUrl.fromLocalFile(self.audio_path))
-        # Set the media content for the player and start playing
-        self.player.setMedia(media)
+        
+        # Set playback properties
         self.type = type_
+        self.is_playing = True
+        self.play_pause_btn.setText("Pause")
+        
         if type_ == 'orig':
             sd.stop()
-            self.timer.stop()
-            self.changed_orig = True
-            self.changed_eq = False
-            # Create a QMediaContent object from the local audio file
+            
+             # Set the media content for the player and start playing
+            media = QMediaContent(QUrl.fromLocalFile(self.audio_path))
+            self.player.setMedia(media)
             self.player.play()
             self.player.setVolume(100)
+
+            
+            self.changed_orig = True
+            self.changed_eq = False
+            
             # Add a vertical line to the original graph
             self.equalized_graph.removeItem(self.line)
             self.original_graph.addItem(self.line)
+            
             self.timer.start()
+
         else:
-            self.changed_eq = True
-            self.changed_orig = False
+            
+            # Stop original audio if it's playing
             self.timer.start()
             self.player.play()
             self.player.setVolume(0)
+            
+            # Update the graph and timer for the equalized sound
+            self.changed_eq = True
+            self.changed_orig = False
+            
             self.original_graph.removeItem(self.line)
             self.equalized_graph.addItem(self.line)
+            
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, blocking=False)
-            self.player.play()
+            
+            self.timer.start()
+
+
                         
     def updatepos(self):
-            max_x = self.original_graph.getViewBox().viewRange()[0][1]
-            graph = self.original_graph if self.changed_orig  else self.equalized_graph
+        max_x = self.original_graph.getViewBox().viewRange()[0][1]
+        graphs = [self.original_graph, self.equalized_graph]
+        graph = graphs[0] if self.changed_orig  else graphs[1]
         # Get the current position in milliseconds
-            position = self.player.position()/1000
-            # Update the line position based on the current position
-            self.line_position = position 
-            max_x = graph.getViewBox().viewRange()[0][1]
-            
-            self.line_position = position
-            self.line.setPos(self.line_position)
+        position = self.player.position()/1000
+        # Update the line position based on the current position
+        self.line_position = position 
+        max_x = graph.getViewBox().viewRange()[0][1]
+        #print(position)
+        if self.line_position > max_x:
+            self.line_position = max_x
+        self.line_position = position
+        self.line.setPos(self.line_position)
         
     def update_speed(self, direction):
         # Increase the playback speed
         self.current_speed += 0.1 * direction  
         self.player.setPlaybackRate(self.current_speed)
         if self.changed_eq:
+            # Play equalized audio at the new speed, adjusting speed with sounddevice
             sd.play(self.time_eq_signal.data, self.current_signal.sample_rate, speed = self.current_speed, volume = 1.0 )
 
     def replay(self):
-        if self.type == 'orig':
-            self.playMusic('orig')
-        else: self.playMusic('equalized')
+        # Restart playback according to current type
+        self.playMusic(self.type)
 
     def play_pause(self):
         if self.is_playing:
-            # Pause the audio
-            self.player.pause()  # Assuming you have an audio player object
-            self.is_playing = False
-            self.play_pause_btn.setText("Play")  # Change the button text to "Play"
-        else:
-            # Start playing the audio
-            self.player.play()  # Assuming you have an audio player object
-            self.is_playing = True
-            self.play_pause_btn.setText("Pause")  # Change the button text to "Pause"
+            # Pause the currently playing sound based on type
+            if self.type == 'orig':
+                # Pause original audio
+                self.player.pause()
+            else:
+                # Pause equalized audio (stop and store position)
+                self.player.pause()
+                sd.stop()
 
+                # Store current position in milliseconds
+                self.equalized_position = self.line_position
+
+            # Update play/pause state
+            self.is_playing = False
+            self.play_pause_btn.setText("Play")
+        else:
+            # Resume the currently paused sound based on type
+            if self.type == 'orig':
+                # Resume original audio
+                self.player.play()
+            else:
+                # Resume equalized audio from stored position
+                self.player.play()
+
+                sd.play(self.time_eq_signal.data[int(self.equalized_position):], self.current_signal.sample_rate)
+
+            # Update play/pause state
+            self.is_playing = True
+            self.play_pause_btn.setText("Pause")
+
+
+    def on_media_finished(self):
+            # Reset button when media finishes
+            if self.player.mediaStatus() == QMediaPlayer.EndOfMedia:
+                self.is_playing = False
+                self.play_pause_btn.setText("Play")
+                self.timer.stop()  # Stop updating position
     def combobox_activated(self):
         # Get the selected item's text and display it in the label
         # selected_index = self.modes_combobox.currentIndex()
