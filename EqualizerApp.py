@@ -436,6 +436,18 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # Define a scaling factor for panning
         pan_scale = 0.005  # Adjust this value to change the sensitivity of panning
 
+        # Get the current visible range of the original graph
+        original_view_range = self.original_graph.getViewBox().viewRange()
+        current_x_min, current_x_max = original_view_range[0]  # Current x-axis range (min and max)
+
+        signal_length = self.current_signal.time[-1]  # End of the signal in seconds
+
+        # Calculate the new x-axis range after applying panning (delta_x)
+        new_x_min = current_x_min - (delta_x * pan_scale)
+        new_x_max = current_x_max - (delta_x * pan_scale)
+        if new_x_min < 0 or new_x_max > signal_length:
+            return
+
         # Apply the panning to both graphs using translateBy
         for graph in [self.original_graph, self.equalized_graph]:
             # Reverse the x direction
