@@ -431,7 +431,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
             
         else:
             # Stop original audio if it's playing
-            self.timer.start()
             self.player.play()
             self.player.setVolume(0)
 
@@ -462,13 +461,25 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.line.setPos(self.line_position)
 
     def update_speed(self, direction):
-        # Increase the playback speed
-        self.current_speed += 0.1 * direction
-        self.player.setPlaybackRate(self.current_speed)
+        # Adjust the playback speed, ensuring it remains above 0.1x
+        self.current_speed = max(0.1, self.current_speed + 0.1 * direction)
+
+        # Stop the current playback to apply the new speed
+        
+
         if self.changed_eq:
-            # Play equalized audio at the new speed, adjusting speed with sounddevice
-            sd.play(self.time_eq_signal.data, self.current_signal.sample_rate,
-                    speed=self.current_speed, volume=1.0)
+            sd.stop()
+            # Calculate new sampling rate based on current speed
+            adjusted_samplerate = int(self.current_signal.sample_rate * self.current_speed)
+
+            # Calculate the starting sample based on current playback position
+            start_sample = int(self.line_position * self.current_signal.sample_rate)
+
+            # Play the equalized audio at the adjusted sample rate for speed control
+            sd.play(self.time_eq_signal.data[start_sample:], samplerate=adjusted_samplerate)
+        else:
+            # For original audio, apply speed adjustment if necessary
+            self.player.setPlaybackRate(self.current_speed)  # Assuming `self.player` supports speed adjustment
 
     def replay(self):
         # Restart playback according to current type
@@ -496,12 +507,15 @@ class EqualizerApp(QtWidgets.QMainWindow):
             if self.type == 'orig':
                 # Resume original audio
                 self.player.play()
+                self.player.setPlaybackRate(self.current_speed)  # Apply speed setting
+
             else:
                 # Resume equalized audio from stored position
-                self.player.play()
+                adjusted_samplerate = int(self.current_signal.sample_rate * self.current_speed)
 
-                sd.play(self.time_eq_signal.data[int(
-                    self.equalized_position):], self.current_signal.sample_rate)
+                start_sample = int(self.equalized_position * self.current_signal.sample_rate)
+                sd.play(self.time_eq_signal.data[start_sample:], samplerate=adjusted_samplerate, blocking=False)
+                self.player.play()
 
             # Update play/pause state
             self.is_playing = True
