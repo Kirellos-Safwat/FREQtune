@@ -351,7 +351,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
                 # plot original frequency data
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],                   # array of freqs
-                                          weighted_fft_signal, pen={'color': 'r'})  # array of corresponding magnitudes
+                                          weighted_fft_signal, pen={'color': 'b'})  # array of corresponding magnitudes
 
             else:  # freq domain
 
