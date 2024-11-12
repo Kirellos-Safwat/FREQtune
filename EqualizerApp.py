@@ -43,7 +43,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.selected_window = None
         self.frame_layout = QHBoxLayout(self.sliders_frame)
         self.current_signal = None
-        self.linear_frequency_scale = False
+        self.linear_frequency_scale = True
         # instance for audio playback
         self.player = QMediaPlayer(None, QMediaPlayer.StreamPlayback)
         self.player.setVolume(50)
@@ -330,39 +330,45 @@ class EqualizerApp(QtWidgets.QMainWindow):
             else:
                 _, end_last_ind = signal.Ranges[-1]
 
-            self.frequency_graph.clear()
 
-            self.frequency_graph.setLabel('bottom', 'Frequency', units='Hz')
-            if not self.linear_frequency_scale:
+            self.frequency_graph.setLabel('bottom', 'Log(Frequency)', units='Hz')
+
+            if not self.linear_frequency_scale:  
+                self.frequency_graph.clear()
+                self.frequency_graph.setLogMode(x=True, y=False)
+
                 self.frequency_graph.setLabel('left', 'Magnitude', units='dB')
-            else:
-                self.frequency_graph.setLabel('left', 'Amplitude')
-
-            if not self.linear_frequency_scale:  # Audio gram
-
-                weights = self.a_weighting(signal.freq_data[0][:end_last_ind])
-                weighted_fft_signal = np.zeros_like(
-                    signal.freq_data[1][:end_last_ind])
-                # Apply weights to the positive frequencies
-                weighted_fft_signal[:len(signal.freq_data[0][:end_last_ind])] = signal.freq_data[1][:end_last_ind][:len(
-                    signal.freq_data[0][:end_last_ind])] * weights
-                weighted_fft_signal[-len(signal.freq_data[0][:end_last_ind]):] = signal.freq_data[1][:end_last_ind][-len(
-                    signal.freq_data[0][:end_last_ind]):] * weights[::-1]
+                ticks = [[(250, '250'), (500, '500'), (1000, '1k'), (2000, '2k'), (4000, '4k')]]
+                # self.frequency_graph.getAxis('bottom').setTicks(ticks)
 
                 # plot original frequency data
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],                   # array of freqs
-                                          weighted_fft_signal, pen={'color': 'b'})  # array of corresponding magnitudes
+                                          signal.freq_data[1][:end_last_ind], pen={'color': 'r'})  # array of corresponding magnitudes
 
             else:  # freq domain
-
+                self.frequency_graph.clear()
+                self.frequency_graph.setLogMode(x=False, y=False)
+                self.frequency_graph.setXRange(20, 10000)
+                self.frequency_graph.setLabel('left', 'Amplitude')
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],              # array of freqs
                                           signal.freq_data[1][:end_last_ind], pen={'color': 'b'})
 
-            # Iterate through the frequency ranges and add vertical lines
-            for i in range(len(signal.Ranges)):
-                if self.selected_mode != 'Uniform Range':
-                    for range_ in signal.Ranges[i]:
-                        start_ind, end_ind = range_
+                # Iterate through the frequency ranges and add vertical lines
+                for i in range(len(signal.Ranges)):
+                    if self.selected_mode != 'Uniform Range':
+                        for range_ in signal.Ranges[i]:
+                            start_ind, end_ind = range_
+                            # Add vertical lines for the start and end of the range
+                            start_line = signal.freq_data[0][start_ind]
+                            end_line = signal.freq_data[0][end_ind - 1]
+                            v_line_start = pg.InfiniteLine(
+                                pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
+                            self.frequency_graph.addItem(v_line_start)
+                            v_line_end = pg.InfiniteLine(
+                                pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
+                            self.frequency_graph.addItem(v_line_end)
+                    else:
+                        start_ind, end_ind = signal.Ranges[i]
                         # Add vertical lines for the start and end of the range
                         start_line = signal.freq_data[0][start_ind]
                         end_line = signal.freq_data[0][end_ind - 1]
@@ -372,35 +378,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
                         v_line_end = pg.InfiniteLine(
                             pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
                         self.frequency_graph.addItem(v_line_end)
-                else:
-                    start_ind, end_ind = signal.Ranges[i]
-                    # Add vertical lines for the start and end of the range
-                    start_line = signal.freq_data[0][start_ind]
-                    end_line = signal.freq_data[0][end_ind - 1]
-                    v_line_start = pg.InfiniteLine(
-                        pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                    self.frequency_graph.addItem(v_line_start)
-                    v_line_end = pg.InfiniteLine(
-                        pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                    self.frequency_graph.addItem(v_line_end)
 
-    def a_weighting(self, frequencies):
-        """
-        A-weighting formula (ITU-R 468-4) with normalization to avoid global amplification.
-        """
-        f_squared = frequencies ** 2
-        numerator = 12194 ** 2 * f_squared ** 2
-        denominator = (f_squared + 20.6 ** 2) * np.sqrt(f_squared + 107.7 **
-                                                        2) * (f_squared + 737.9 ** 2) * (f_squared + 12194 ** 2)
 
-        # Normalize to avoid global amplification
-        weighting = numerator / denominator
-
-        # Normalization
-        max_weighting = np.max(weighting)
-        normalized_weighting = weighting / max_weighting
-
-        return normalized_weighting
 
     def toggle_freq(self):
         if self.freq_radio.isChecked():
@@ -597,7 +576,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # Get the selected item's text and display it in the label
         # selected_index = self.modes_combobox.currentIndex()
         self.selected_mode = self.modes_combobox.currentText()
-        self.linear_frequency_scale = not self.linear_frequency_scale
         # store the mode in a global variable
         self.add_slider()
         self.Range_spliting()
