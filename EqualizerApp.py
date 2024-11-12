@@ -210,60 +210,60 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def load(self):
         path_info = QtWidgets.QFileDialog.getOpenFileName(
-            None, "Select a signal...",os.getenv('HOME'), filter="Raw Data (*.csv *.wav *.mp3)")
-        path = path_info[0] #actual file path is 1st element of tuple
-        time = []
-        time = []
-        self.equalized_bool = False #signal isn't equalized yet
+            None, "Select a signal...", os.getenv('HOME'), filter="Raw Data (*.csv *.wav *.mp3)")
+        path = path_info[0]  # actual file path is 1st element of tuple
+
+        self.equalized_bool = False  # signal isn't equalized yet
         sample_rate = 0
-        data = [] #empty list where signal data is to be stored later 
+        data = []  # empty list where signal data is to be stored later
 
-        signal_name = path.split('/')[-1].split('.')[0]   #get signal name from file path
-        type = path.split('.')[-1] #get extension
-        #check file type and load data accordingly
+        # get signal name from file path
+        signal_name = path.split('/')[-1].split('.')[0]
+        type_ = path.split('.')[-1]  # get extension
+        # check file type and load data accordingly
 
-        #if it is an audio
-        if type in ["wav", "mp3"]:
+        # if it is an audio
+        if type_ in ["wav", "mp3"]:
             data, sample_rate = librosa.load(path)
             Duration = librosa.get_duration(y=data, sr=sample_rate)
-            self.duration = Duration
             time = np.linspace(0, Duration, len(data))
-            self.audio_data = path
-        elif type == "csv":
-            data_of_signal = pd.read_csv(path)  
-            time = np.array(data_of_signal.iloc[:,0].astype(float).tolist())
-            data = np.array(data_of_signal.iloc[:,1].astype(float).tolist())
+            self.audio_path = path
+        elif type_ == "csv":
+            signal_data = pd.read_csv(path)
+            time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
+            data = np.array(signal_data.iloc[:, 1].astype(float).tolist())
             if len(time) > 1:
-                sample_rate = 1 /( time[1]-time[0])
+                sample_rate = 1 / (time[1]-time[0])
             else:
-                sample_rate=1
+                sample_rate = 1
         # Create a Signal object and set its attributes
-        self.current_signal = SignalGenerator(signal_name)
-        self.current_signal.data = data
-        self.current_signal.time = time
-        self.current_signal.sample_rate = sample_rate 
-        self.sampling_rate = sample_rate
+        self.current_signal = SignalGenerator(signal_name, data=data,
+                                              time=time, sample_rate=sample_rate)
+        # calc & set the FT of signal
+        T = 1 / sample_rate  # calc period
+        frequency_axis, amplitude_axis = self.get_Fourier(T, data)
+        self.current_signal.freq_data = [frequency_axis, amplitude_axis]
 
-
-        #calc & set the FT of signal
-        T = 1 / self.current_signal.sample_rate  #calc period
-        x_data, y_data = self.get_Fourier(T, self.current_signal.data)  #x_data: freq , y_data: amp
-        self.current_signal.freq_data = [x_data, y_data]
-
-        #UNIFORM MODE:
-        for i in range(10): #divide freq into 10 equal ranges
-            self.batch_size = len(self.current_signal.freq_data[0])//10  #batch_sz = len(freqdata)/10
-            self.dictionary['Uniform Range'][i] = [i*self.batch_size,(i+1)*self.batch_size]   #store ranges in dictionary
+        # UNIFORM MODE:
+        self.batch_size = len(frequency_axis)//10
+        for i in range(10):  # divide freq into 10 equal ranges
+            self.dictionary['Uniform Range'][i] = [
+                i*self.batch_size, (i+1)*self.batch_size]  # store ranges in dictionary
 
         self.frequency_graph.clear()
         if self.spectrogram_after.count() > 0:
-            self.spectrogram_after.itemAt(0).widget().setParent(None) #remove canvas by setting parent -> None
+            self.spectrogram_after.itemAt(0).widget().setParent(
+                None)  # remove canvas by setting parent -> None
 
         self.Plot("original")
-        self.plot_spectrogram(data, sample_rate , self.spectrogram_before)
-        self.frequency_graph.plot(self.current_signal.freq_data[0],
-                    self.current_signal.freq_data[1],pen={'color': 'b'})
+        self.plot_spectrogram(data, sample_rate, self.spectrogram_before)
+        self.frequency_graph.plot(
+            frequency_axis, amplitude_axis, pen={'color': 'b'})
+
+        # makes deep copy of current_signal and store it in eqsignal to preserve original signal for later processing
         self.eqsignal = copy.deepcopy(self.current_signal)
+
+        self.combobox_activated()
 
     def get_Fourier(self, T, data):
         N = len(data)  # bec FFT depends on #data_points in signal
