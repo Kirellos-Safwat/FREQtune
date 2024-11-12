@@ -325,8 +325,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
         signal = self.eqsignal if self.equalized_bool else self.current_signal
         if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             # get end index of last frequency range to know when to stop plotting
-            _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[3][-1][1]
-            
+            if self.selected_mode != 'Uniform Range':
+                _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[3][-1][1]
+            else:
+                _, end_last_ind = signal.Ranges[-1]
 
             self.frequency_graph.clear()
 
@@ -358,8 +360,20 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
             # Iterate through the frequency ranges and add vertical lines
             for i in range(len(signal.Ranges)):
-                for range_ in signal.Ranges[i]:
-                    start_ind, end_ind = range_
+                if self.selected_mode != 'Uniform Range':
+                    for range_ in signal.Ranges[i]:
+                        start_ind, end_ind = range_
+                        # Add vertical lines for the start and end of the range
+                        start_line = signal.freq_data[0][start_ind]
+                        end_line = signal.freq_data[0][end_ind - 1]
+                        v_line_start = pg.InfiniteLine(
+                            pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
+                        self.frequency_graph.addItem(v_line_start)
+                        v_line_end = pg.InfiniteLine(
+                            pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
+                        self.frequency_graph.addItem(v_line_end)
+                else:
+                    start_ind, end_ind = signal.Ranges[i]
                     # Add vertical lines for the start and end of the range
                     start_line = signal.freq_data[0][start_ind]
                     end_line = signal.freq_data[0][end_ind - 1]
@@ -696,9 +710,23 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def equalized(self, slider_index, value):
         self.equalized_bool = True
         self.time_eq_signal.time = self.current_signal.time
+        if self.selected_mode != 'Uniform Range':
+            for subrange in self.current_signal.Ranges[slider_index]:
+                start, end = subrange
 
-        for subrange in self.current_signal.Ranges[slider_index]:
-            start, end = subrange
+                # Get the original amplitude data
+                Amp = np.array(self.current_signal.freq_data[1][start:end])
+
+                # Scale the amplitude directly with the given value
+                new_amp = Amp * value
+
+                # Update the equalized signal's frequency data
+                self.eqsignal.freq_data[1][start:end] = new_amp
+
+                # Plot the frequency graph without smoothing
+                # self.plot_freq()  # Ensure this method does not involve any smoothing logic
+        else:
+            start, end = self.current_signal.Ranges[slider_index]
 
             # Get the original amplitude data
             Amp = np.array(self.current_signal.freq_data[1][start:end])
@@ -709,10 +737,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             # Update the equalized signal's frequency data
             self.eqsignal.freq_data[1][start:end] = new_amp
 
-            # Plot the frequency graph without smoothing
-            # self.plot_freq()  # Ensure this method does not involve any smoothing logic
-
-            # Update the time equalized signal
+        # Update the time equalized signal
         self.time_eq_signal.data = self.recovered_signal(
             self.eqsignal.freq_data[1], self.current_signal.phase)
 
