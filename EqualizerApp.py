@@ -429,9 +429,20 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def playMusic(self, type_):
         self.current_speed = self.speed_slider.value()
+        print(f"speed from slider: {self.current_speed}")
+
+
+            
         self.update_speed(self.current_speed)
+        print(f"updated speeed: {self.current_speed}")
+
+        if self.current_speed == 0:
+            self.current_speed = 1
+            
+        print(f"current speeed: {self.current_speed}")
         self.line_position = 0
         self.player.setPlaybackRate(self.current_speed)
+        print(f"{self.current_speed} for playmusic")
 
         # Set playback properties
         self.type = type_
@@ -488,7 +499,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
     def update_speed(self, direction):
         # Adjust the playback speed, ensuring it remains above 0.1x
-        self.current_speed = max(0.1, self.current_speed + direction)
+        print(f" speed before update_speed {self.current_speed}")
+        
+        self.current_speed =  direction+1 if direction >0 else np.abs(direction)*0.1
+        print(f" test speed after update_speed {self.current_speed}")
 
         # Stop the current playback to apply the new speed
 

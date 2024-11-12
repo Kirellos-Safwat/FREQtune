@@ -839,10 +839,10 @@ color: rgb(255, 255, 255);
              </size>
             </property>
             <property name="minimum">
-             <number>-10</number>
+             <number>-5</number>
             </property>
             <property name="maximum">
-             <number>10</number>
+             <number>4</number>
             </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
