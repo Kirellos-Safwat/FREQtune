@@ -41,7 +41,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.selected_window = None
         self.frame_layout = QHBoxLayout(self.sliders_frame)
         self.current_signal = None
-        self.linear_frequency_scale = False #toggle between linear freq scale & audiogram
+        self.linear_frequency_scale = True #toggle between linear freq scale & audiogram
         #instance for audio playback
         self.player = QMediaPlayer(None, QMediaPlayer.StreamPlayback)
         self.player.setVolume(50)
