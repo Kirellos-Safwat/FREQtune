@@ -194,14 +194,43 @@ color: rgb(255, 255, 255);
                    </property>
                    <property name="font">
                     <font>
-                     <pointsize>10</pointsize>
+                     <pointsize>-1</pointsize>
                      <weight>50</weight>
                      <bold>false</bold>
                     </font>
                    </property>
                    <property name="styleSheet">
-                    <string notr="true">color: white
-;</string>
+                    <string notr="true">QCheckBox {
+        spacing: 8px;  /* Distance between checkbox and text */
+        font-size: 14px;
+        color: #FFFFFF;  /* White text */
+    }
+    
+    /* Unchecked state */
+    QCheckBox::indicator {
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        border: 2px solid #A0A0A0;  /* Gray border for unchecked */
+        background-color: transparent;  /* Transparent background */
+    }
+
+    /* Checked state */
+    QCheckBox::indicator:checked {
+        border: 2px solid #4682B4;  /* Blue border when checked */
+        background-color: rgb(0, 111, 163);  /* Transparent background */
+    }
+
+    /* Hover effect */
+    QCheckBox::indicator:hover {
+        border-color: #B0C4DE;  /* Light steel blue border on hover */
+    }
+
+    /* Disabled state */
+    QCheckBox::indicator:disabled {
+        border-color: #D3D3D3;  /* Light gray border for disabled */
+        background-color: transparent;  /* Transparent background */
+    }</string>
                    </property>
                    <property name="text">
                     <string>Show/Hide</string>
@@ -848,6 +877,25 @@ color: rgb(255, 255, 255);
            </widget>
           </item>
           <item>
+           <widget class="QSlider" name="speed_slider">
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>-10</number>
+            </property>
+            <property name="maximum">
+             <number>10</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -894,6 +942,19 @@ color: rgb(255, 255, 255);
                <string>Audiogram</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>
