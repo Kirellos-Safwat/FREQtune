@@ -115,7 +115,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda: self.hide())
         self.dictionary = {
             'Uniform Range': {},
-            'Musical Instruments': {"Guitar": [(40, 200),(4200,4500)],
+            'Musical Instruments': {"Guitar": [(40, 400)],
                                     "Flute": [(400, 800)],
                                     "Violin ": [(950, 4000)],
                                     "Xylophone": [(5000, 14000)]
@@ -281,6 +281,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
         return Freq, Amp
 
     def Range_spliting(self):
+        if self.current_signal is None:
+            return
         freq = self.current_signal.freq_data[0]  #zero index for freq val
         if self.selected_mode == 'Uniform Range':
             self.current_signal.Ranges = [(i*self.batch_size,(i+1)*self.batch_size) for i in range(10)]  #divide range into 10 ranges
@@ -703,6 +705,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.user_interacting = True
 
     def equalized(self, slider_index, value):
+        if self.current_signal is None:
+            return
         self.equalized_bool = True
         self.time_eq_signal.time = self.current_signal.time
         if self.selected_mode != 'Uniform Range':
