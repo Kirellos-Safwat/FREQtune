@@ -109,8 +109,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.replay_btn.clicked.connect(lambda: self.replay())
         self.zoom_in_btn.clicked.connect(lambda: self.zoom_in())
         self.zoom_out_btn.clicked.connect(lambda: self.zoom_out())
-        self.speed_up_btn.clicked.connect(lambda: self.update_speed(1))
-        self.speed_down_btn.clicked.connect(lambda: self.update_speed(-1))
+
         self.speed_slider.valueChanged.connect(
             lambda: self.update_speed(self.speed_slider.value()))
         self.checkBox.stateChanged.connect(lambda: self.hide())

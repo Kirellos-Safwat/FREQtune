@@ -831,56 +831,10 @@ color: rgb(255, 255, 255);
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="speed_up_btn">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset>
-              <normaloff>imgs/speed up.png</normaloff>imgs/speed up.png</iconset>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="speed_down_btn">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset>
-              <normaloff>imgs/speed down.png</normaloff>imgs/speed down.png</iconset>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QSlider" name="speed_slider">
             <property name="maximumSize">
              <size>
-              <width>200</width>
+              <width>150</width>
               <height>16777215</height>
              </size>
             </property>
@@ -905,7 +859,7 @@ color: rgb(255, 255, 255);
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>400</width>
+              <width>450</width>
               <height>20</height>
              </size>
             </property>
