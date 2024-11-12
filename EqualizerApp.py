@@ -515,8 +515,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # Adjust the playback speed, ensuring it remains above 0.1x
         print(f" speed before update_speed {self.current_speed}")
         
-        self.current_speed =  direction+1 if direction >0 else np.abs(direction)*0.1
-        print(f" test speed after update_speed {self.current_speed}")
+        if direction == 0:
+            self.current_speed = 1
+        else:
+            self.current_speed =  direction+1 if direction >0 else np.abs(direction)*0.1
+            print(f" test speed after update_speed {self.current_speed}")
 
         # Stop the current playback to apply the new speed
 
