@@ -332,14 +332,14 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
 
             self.frequency_graph.setLabel('bottom', 'Log(Frequency)', units='Hz')
+            self.frequency_graph.setLabel('left', 'Magnitude', units='dB')
 
             if not self.linear_frequency_scale:  
                 self.frequency_graph.clear()
                 self.frequency_graph.setLogMode(x=True, y=False)
 
-                self.frequency_graph.setLabel('left', 'Magnitude', units='dB')
-                ticks = [[(250, '250'), (500, '500'), (1000, '1k'), (2000, '2k'), (4000, '4k')]]
-                # self.frequency_graph.getAxis('bottom').setTicks(ticks)
+                ticks = [[(np.log10(250), '250'), (np.log10(500), '500'), (np.log10(1000), '1k'), (np.log10(2000), '2k'), (np.log10(4000), '4k')]]
+                self.frequency_graph.getAxis('bottom').setTicks(ticks)
 
                 # plot original frequency data
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],                   # array of freqs
@@ -347,37 +347,28 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
             else:  # freq domain
                 self.frequency_graph.clear()
+                self.frequency_graph.getAxis('bottom').setTicks(None)
                 self.frequency_graph.setLogMode(x=False, y=False)
-                self.frequency_graph.setXRange(20, 10000)
-                self.frequency_graph.setLabel('left', 'Amplitude')
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],              # array of freqs
                                           signal.freq_data[1][:end_last_ind], pen={'color': 'b'})
-
-                # Iterate through the frequency ranges and add vertical lines
-                for i in range(len(signal.Ranges)):
-                    if self.selected_mode != 'Uniform Range':
-                        for range_ in signal.Ranges[i]:
-                            start_ind, end_ind = range_
-                            # Add vertical lines for the start and end of the range
-                            start_line = signal.freq_data[0][start_ind]
-                            end_line = signal.freq_data[0][end_ind - 1]
-                            v_line_start = pg.InfiniteLine(
-                                pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                            self.frequency_graph.addItem(v_line_start)
-                            v_line_end = pg.InfiniteLine(
-                                pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                            self.frequency_graph.addItem(v_line_end)
-                    else:
-                        start_ind, end_ind = signal.Ranges[i]
-                        # Add vertical lines for the start and end of the range
-                        start_line = signal.freq_data[0][start_ind]
-                        end_line = signal.freq_data[0][end_ind - 1]
-                        v_line_start = pg.InfiniteLine(
-                            pos=start_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                        self.frequency_graph.addItem(v_line_start)
-                        v_line_end = pg.InfiniteLine(
-                            pos=end_line, angle=90, movable=False, pen=pg.mkPen('r', width=2))
-                        self.frequency_graph.addItem(v_line_end)
+        
+        def plot_ranges(start, end, color):
+            # Add vertical lines for the start and end of the range
+            start_line = np.log10(signal.freq_data[0][start] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][start]
+            end_line = np.log10(signal.freq_data[0][end - 1] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][end - 1]
+            v_line_start = pg.InfiniteLine(
+                pos=start_line, angle=90, movable=False, pen=pg.mkPen(color, width=2, style=Qt.DashLine))
+            self.frequency_graph.addItem(v_line_start)
+            v_line_end = pg.InfiniteLine(
+                pos=end_line, angle=90, movable=False, pen=pg.mkPen(color, width=2, style=Qt.DashLine))
+            self.frequency_graph.addItem(v_line_end)
+            
+        for i in range(len(signal.Ranges)):
+            if self.selected_mode != 'Uniform Range':
+                for range_ in signal.Ranges[i]:
+                    plot_ranges(*range_, color='y')
+            else:
+                plot_ranges(*signal.Ranges[i], color='y')
 
 
 
