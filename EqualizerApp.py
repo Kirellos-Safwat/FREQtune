@@ -320,6 +320,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
             legend.addItem(plot_item, name=f"{signal.name}")
 
     def plot_freq(self):
+        if self.current_signal is None:
+            return
         signal = self.eqsignal if self.equalized_bool else self.current_signal
         if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             # get end index of last frequency range to know when to stop plotting
