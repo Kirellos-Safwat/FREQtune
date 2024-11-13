@@ -63,6 +63,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.is_panning = False
         self.last_mouse_pos = None
         self.user_interacting = False
+        self.regions = []
 
         #initializing graphs & connecting mouse events
         self.original_graph.setMouseTracking(True)
@@ -96,6 +97,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         #UI conectionsss:
         self.modes_combobox.activated.connect(
             lambda: self.combobox_activated())
+
         self.load_btn.clicked.connect(lambda: self.load())
         self.hear_orig_btn.clicked.connect(lambda: self.playMusic('orig'))
         self.hear_eq_btn.clicked.connect(lambda: self.playMusic('equalized'))
@@ -108,7 +110,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda: self.hide())
         self.dictionary = {
             'Uniform Range': {},
-            'Musical Instruments': {"Guitar": [(40, 400)],
+            'Musical Instruments': {"Guitar": [(40, 400), (500, 800)],
                                     "Flute": [(400, 800)],
                                     "Violin ": [(950, 4000)],
                                     "Xylophone": [(5000, 14000)]
@@ -299,7 +301,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
                     else:
                         self.current_signal.Ranges[_].append((start_ind,end_ind)) #if key is in Ranges, append(start_ind, end_ind) tuple to existing list for that key
                     
-        print(self.current_signal.Ranges)
         self.eqsignal.Ranges = copy.deepcopy(self.current_signal.Ranges)
 
     def Plot(self, graph):
@@ -326,10 +327,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
             if self.selected_mode != 'Uniform Range':
                 _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[3][-1][1]
             else:
+                print(signal.Ranges)
                 _, end_last_ind = signal.Ranges[-1]
 
 
-            self.frequency_graph.setLabel('bottom', 'Log(Frequency)', units='Hz')
+            self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
             self.frequency_graph.setLabel('left', 'Magnitude', units='dB')
 
             if not self.linear_frequency_scale:  
@@ -350,8 +352,12 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],              # array of freqs
                                           signal.freq_data[1][:end_last_ind], pen={'color': 'b'})
         
-        def plot_ranges(start, end, color):
+        def plot_ranges(start, end, i):
             # Add vertical lines for the start and end of the range
+            if i % 2 == 0:
+                color = 'y'
+            else:
+                color = 'g'
             start_line = np.log10(signal.freq_data[0][start] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][start]
             end_line = np.log10(signal.freq_data[0][end - 1] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][end - 1]
             v_line_start = pg.InfiniteLine(
@@ -360,13 +366,23 @@ class EqualizerApp(QtWidgets.QMainWindow):
             v_line_end = pg.InfiniteLine(
                 pos=end_line, angle=90, movable=False, pen=pg.mkPen(color, width=2, style=Qt.DashLine))
             self.frequency_graph.addItem(v_line_end)
+
+            region = pg.LinearRegionItem()
+            region.setZValue(10)  
+            region.setBrush(pg.mkBrush(color=(255 if i % 2 == 0 else 0, 255 if i % 2 != 0 else 0, 0, 20)))
+            region.setRegion([start_line, end_line])  #start ur region
+            region.setMovable(False)
+            self.frequency_graph.addItem(region)
+            region.show()
+            self.regions.append(region)
+
             
         for i in range(len(signal.Ranges)):
             if self.selected_mode != 'Uniform Range':
                 for range_ in signal.Ranges[i]:
-                    plot_ranges(*range_, color='y')
+                    plot_ranges(*range_, i)
             else:
-                plot_ranges(*signal.Ranges[i], color='y')
+                plot_ranges(*signal.Ranges[i], i)
 
 
 
@@ -562,6 +578,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # store the mode in a global variable
         self.add_slider()
         self.Range_spliting()
+        self.plot_freq()
 
     def clear_layout(self, layout):
         for i in reversed(range(layout.count())):
