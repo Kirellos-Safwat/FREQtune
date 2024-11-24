@@ -334,7 +334,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
 
             self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
-            self.frequency_graph.setLabel('left', 'Magnitude', units='dB')
+            self.frequency_graph.setLabel('left', 'Magnitude')
 
             if not self.linear_frequency_scale:  
                 self.frequency_graph.clear()
@@ -415,17 +415,33 @@ class EqualizerApp(QtWidgets.QMainWindow):
         ax = fig.add_subplot(111)
         ax.set_facecolor("none")
         ax.tick_params(colors='gray')
-    
+
+        max_amplitude = np.max(self.current_signal.freq_data[1][:])
+        max_amplitude = round(1000 * max_amplitude, 2)
+
         # Display the spectrogram with time on the x-axis and frequency on the y-axis
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                 extent=[t[0], t[-1], f[-1], f[0]])
 
+        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), 10)]
+        print(y_ticks)
+
         cbar = fig.colorbar(cax, ax=ax, format='%.2f')
-        cbar.set_label('Magnitude (dB)')
+        cbar.set_label('Amplitude', color='white')
+
+        def custom_ticks(val, pos):
+            # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
+            return f'{val:.2f}'  # Customize this as needed
+        
+        cbar.ax.tick_params(labelsize=10, labelcolor='white')
+        cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
+
+        ax.tick_params(axis='x', labelcolor='white')  # Set x-tick labels to white
+        ax.tick_params(axis='y', labelcolor='white')
 
         ax.invert_yaxis()
-        ax.set_ylabel("Frequency (Hz)")
-        ax.set_xlabel("Time (s)")
+        # ax.set_ylabel("Frequency (Hz)", color='white')
+        # ax.set_xlabel("Time (s)", color='white')
 
         # Create the canvas for the plot and add it to the widget
         canvas = FigureCanvas(fig)
