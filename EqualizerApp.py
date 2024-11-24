@@ -333,12 +333,13 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 _, end_last_ind = signal.Ranges[-1]
 
 
-            self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
+            # self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
             self.frequency_graph.setLabel('left', 'Magnitude')
 
             if not self.linear_frequency_scale:  
                 self.frequency_graph.clear()
                 self.frequency_graph.setLogMode(x=True, y=False)
+                self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
 
                 ticks = [[(np.log10(250), '250'), (np.log10(500), '500'), (np.log10(1000), '1k'), (np.log10(2000), '2k'), (np.log10(4000), '4k')]]
                 self.frequency_graph.getAxis('bottom').setTicks(ticks)
@@ -349,6 +350,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
             else:  # freq domain
                 self.frequency_graph.clear()
+                self.frequency_graph.setLabel('bottom', 'Frequency (Hz)')
                 self.frequency_graph.getAxis('bottom').setTicks(None)
                 self.frequency_graph.setLogMode(x=False, y=False)
                 self.frequency_graph.plot(signal.freq_data[0][:end_last_ind],              # array of freqs
