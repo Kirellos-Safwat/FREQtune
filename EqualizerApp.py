@@ -115,15 +115,15 @@ class EqualizerApp(QtWidgets.QMainWindow):
                                     "Violin ": [(950, 4000)],
                                     "Xylophone": [(5000, 14000)]
                                     },
-            "Animal Sounds": {"Dog": [(0, 450)],
+            "Animal Sounds": {"Dog": [(100, 450)],
                               "Wolf": [(450, 1100)],
                               "Crow": [(1100, 3000)],
                               "Bat": [(3000, 9000)]
                               },
             'ECG Abnormalities': {"Normal": [(0, 35)],
-                                  "Arrythmia_1 ": [(48, 52)],
-                                  "Arrythmia_2": [(55, 94)],
-                                  "Arrythmia_3": [(95, 155)]
+                                  "VF ": [(48, 52)],
+                                  "2nd_degree": [(55, 94)],
+                                  "AF": [(95, 155)]
                                   }
         }
 
@@ -329,7 +329,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             if self.selected_mode != 'Uniform Range':
                 _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[3][-1][1]
             else:
-                print(signal.Ranges)
+                # print(signal.Ranges)
                 _, end_last_ind = signal.Ranges[-1]
 
 
@@ -360,8 +360,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 color = 'y'
             else:
                 color = 'g'
-            start_line = np.log10(signal.freq_data[0][start] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][start]
-            end_line = np.log10(signal.freq_data[0][end - 1] + 1e-10) if not self.linear_frequency_scale else signal.freq_data[0][end - 1]
+            start_line = np.log10(signal.freq_data[0][start] + 1) if not self.linear_frequency_scale else signal.freq_data[0][start]
+            end_line = np.log10(signal.freq_data[0][end - 1] + 1) if not self.linear_frequency_scale else signal.freq_data[0][end - 1]
             v_line_start = pg.InfiniteLine(
                 pos=start_line, angle=90, movable=False, pen=pg.mkPen(color, width=2, style=Qt.DashLine))
             self.frequency_graph.addItem(v_line_start)
@@ -400,31 +400,34 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if widget.count() > 0:
             # if widget contains any items, clear existing spectrogram
             widget.itemAt(0).widget().setParent(None)
+            
         data = samples.astype('float32')
         n_fft = 500  # size of fft = window length
         hop_length = 320  # number of samples between fft windows
-        # compute short-time FT magnitude squared
-        frequency_magnitude = np.abs(librosa.stft(
-            data, n_fft=n_fft, hop_length=hop_length, win_length=n_fft)) ** 2
-        # compute mel spectrogram
-        mel_spectrogram = librosa.feature.melspectrogram(S=frequency_magnitude, y=data, sr=sampling_rate, n_fft=n_fft,
-                                                         hop_length=hop_length, win_length=n_fft, n_mels=128)
-        # convert power spectrogram to dB
-        decibel_spectrogram = librosa.power_to_db(
-            mel_spectrogram, ref=np.max)  # (Max power -> 0dB)
-        time_axis = np.linspace(0, len(data) / sampling_rate)
+        
+        f, t, Sxx = sg.spectrogram(data, fs=sampling_rate, nperseg=n_fft, noverlap=hop_length, nfft=n_fft)
+        decibel_spectrogram = 10 * np.log10(Sxx)   # convert to decibel
+ 
         fig = Figure()
         fig = Figure(figsize=(3, 3))
-        fig.patch.set_alpha(0)
+        fig.patch.set_alpha(0)  # make the figure background transparent
 
         ax = fig.add_subplot(111)
         ax.set_facecolor("none")
         ax.tick_params(colors='gray')
-        # x-axis -> entire time, y-axis -> freq: 0 - Ts/2
-        ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
-                  extent=[time_axis[0], time_axis[-1], 0, sampling_rate / 2])
-        ax.axes.plot()
+    
+        # Display the spectrogram with time on the x-axis and frequency on the y-axis
+        cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
+                extent=[t[0], t[-1], f[-1], f[0]])
 
+        cbar = fig.colorbar(cax, ax=ax, format='%.2f')
+        cbar.set_label('Magnitude (dB)')
+
+        ax.invert_yaxis()
+        ax.set_ylabel("Frequency (Hz)")
+        ax.set_xlabel("Time (s)")
+
+        # Create the canvas for the plot and add it to the widget
         canvas = FigureCanvas(fig)
         widget.addWidget(canvas)
 
