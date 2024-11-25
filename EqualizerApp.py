@@ -327,7 +327,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             # get end index of last frequency range to know when to stop plotting
             if self.selected_mode != 'Uniform Range':
-                _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[3][-1][1]
+                number_of_sliders = len(signal.Ranges)
+                _, end_last_ind = signal.Ranges[0][0][0], signal.Ranges[number_of_sliders-1][-1][1]
             else:
                 # print(signal.Ranges)
                 _, end_last_ind = signal.Ranges[-1]
