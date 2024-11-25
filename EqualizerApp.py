@@ -120,11 +120,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
                               "Crow": [(1100, 3000)],
                               "Bat": [(3000, 9000)]
                               },
-            'ECG Abnormalities': {"Normal": [(0, 35)],
-                                  "VF ": [(48, 52)],
-                                  "2nd_degree": [(55, 94)],
-                                  "AF": [(95, 155)]
+            'ECG Abnormalities': {"Normal": [(0.5, 3), (10, 40)],
+                                  "Ventricular Tachycardia ": [(1.5, 4), (40, 200)],
+                                  "Atrial Fibrillation" : [(95, 144)]
                                   }
+
         }
 
     def zoom_graph(self, event):
