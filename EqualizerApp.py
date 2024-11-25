@@ -399,6 +399,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
 
     def plot_spectrogram(self, samples, sampling_rate, widget):
+        if self.current_signal is None:
+            return
+        signal = self.eqsignal if self.equalized_bool else self.current_signal
+
         if widget.count() > 0:
             # if widget contains any items, clear existing spectrogram
             widget.itemAt(0).widget().setParent(None)
@@ -418,15 +422,14 @@ class EqualizerApp(QtWidgets.QMainWindow):
         ax.set_facecolor("none")
         ax.tick_params(colors='gray')
 
-        max_amplitude = np.max(self.current_signal.freq_data[1][:])
-        max_amplitude = round(1000 * max_amplitude, 2)
+        max_amplitude = np.max(signal.freq_data[1][:])
+        max_amplitude = round(1000 * 2 * max_amplitude, 2)
 
         # Display the spectrogram with time on the x-axis and frequency on the y-axis
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                 extent=[t[0], t[-1], f[-1], f[0]])
 
-        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), 10)]
-        print(y_ticks)
+        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), int(max_amplitude/10))]
 
         cbar = fig.colorbar(cax, ax=ax, format='%.2f')
         cbar.set_label('Amplitude', color='white')
