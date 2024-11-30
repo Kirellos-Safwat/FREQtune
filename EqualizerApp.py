@@ -120,9 +120,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
                               "Crow": [(1100, 3000)],
                               "Bat": [(3000, 9000)]
                               },
-            'ECG Abnormalities': {"Normal": [(0.5, 3), (10, 40)],
-                                  "Ventricular Tachycardia ": [(1.5, 4), (40, 200)],
-                                  "Atrial Fibrillation" : [(95, 144)]
+
+            'ECG Abnormalities': {"Normal": [(0.5, 20)],
+                                  "Ventricular couplets": [(0,8)],
+                                  "Atrial Fibrillation" : [(59, 62)],
+                                    "Bradycardia": [(75, 96)]
                                   }
 
         }
@@ -363,7 +365,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 color = 'y'
             else:
                 color = 'g'
-            start_line = np.log10(signal.freq_data[0][start] + 1) if not self.linear_frequency_scale else signal.freq_data[0][start]
+            try:
+                start_line = np.log10(signal.freq_data[0][start] + 1) if not self.linear_frequency_scale else signal.freq_data[0][start]
+            except Exception as e:
+                print(f"Error at plot_ranges: {e}")
+                raise ValueError
             end_line = np.log10(signal.freq_data[0][end - 1] + 1) if not self.linear_frequency_scale else signal.freq_data[0][end - 1]
             v_line_start = pg.InfiniteLine(
                 pos=start_line, angle=90, movable=False, pen=pg.mkPen(color, width=2, style=Qt.DashLine))
