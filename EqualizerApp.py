@@ -496,6 +496,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.equalized_graph.removeItem(self.line)
             self.original_graph.addItem(self.line)
 
+            # sd.stop()
+
         else: #if equalized graph
             #stop original audio if it's playing by setting volume = 0
             self.player.play()
@@ -526,6 +528,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if self.line_position > max_x:
             self.line_position = max_x
         self.line_position = position
+
+        self.original_graph.getViewBox().setRange(xRange=[0, self.line_position], padding=0)
+        self.equalized_graph.getViewBox().setRange(xRange=[0, self.line_position], padding=0)
+
         self.line.setPos(self.line_position)
 
     def update_speed(self, direction):
