@@ -110,10 +110,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda: self.hide())
         self.dictionary = {
             'Uniform Range': {},
-            'Musical Instruments': {"Guitar": [(40, 400), (500, 800)],
-                                    "Flute": [(400, 800)],
-                                    "Violin ": [(950, 4000)],
-                                    "Xylophone": [(5000, 14000)]
+            'Musical Instruments': {"Piano": [(0, 620),(780,800)],
+                                    "Opera": [(620, 780),(800,950),(1500,2080),(2160,3140),(3210,4250)],
+                                    "Xylophone ": [(950, 1040), (1100,1500)],
+                                    "Clarinet": [(1040, 1100), (2080,2160),(3140,3210)]
                                     },
             "Animal Sounds": {"Wolf": [(0, 800)],
                               "Bird": [(2000, 4000)],
