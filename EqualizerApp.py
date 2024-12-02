@@ -115,10 +115,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
                                     "Violin ": [(950, 4000)],
                                     "Xylophone": [(5000, 14000)]
                                     },
-            "Animal Sounds": {"Dog": [(100, 450)],
-                              "Wolf": [(450, 1100)],
-                              "Crow": [(1100, 3000)],
-                              "Bat": [(3000, 9000)]
+            "Animal Sounds": {"Wolf": [(0, 800)],
+                              "Bird": [(2000, 4000)],
+                              "Cat": [(800,2000),(4000, 6000)],
+                              "Bat": [(6000, 12000)]
                               },
 
             'ECG Abnormalities': {"Normal": [(0.5, 20)],
@@ -436,7 +436,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                 extent=[t[0], t[-1], f[-1], f[0]])
 
-        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), int(max_amplitude/10))]
+        if max_amplitude == 0:
+            y_ticks = [0]  # Or any default
+        else:
+            y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
+
 
         cbar = fig.colorbar(cax, ax=ax, format='%.2f')
         cbar.set_label('Amplitude', color='white')
