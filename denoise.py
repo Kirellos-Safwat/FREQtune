@@ -6,6 +6,7 @@ from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QLabel, QHBoxLayout, QFileDialog, QMessageBox
 import pyqtgraph as pg
 from PyQt5.QtCore import Qt
+from scipy import signal as sg
 
 
 class Denoise(QWidget):
@@ -34,12 +35,20 @@ class Denoise(QWidget):
         self.plot_widget.setMouseEnabled(x=False, y=False)
         self.plot_widget.scene().sigMouseClicked.connect(self.on_mouse_clicked)
 
+        self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
         #create region item to highlight selected area
         self.region = pg.LinearRegionItem()
         self.region.setZValue(10)  
         self.region.hide()  # default is hidden till used
         self.plot_widget.addItem(self.region)
 
+    def wiener_filter(self, data , selected_range):
+        start, end = selected_range
+        start_idx = int(start)
+        end_idx = int(end)
+        sub_signal = data[start_idx:end_idx + 1]
+        # apply wiener filter to the signal
+        return sg.wiener(sub_signal)
 
     def on_mouse_clicked(self, event):
         #mouse click
@@ -93,9 +102,11 @@ class Denoise(QWidget):
         #extraction of sub-signal
         self.sub_signal  = self.signal.data[start_idx:end_idx + 1]
         # plot
-        self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
+        # self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
         #hide region after selection
-        self.reduce_noise()
+        filtered_signal = self.wiener_filter(self.signal.data, selected_range)
+        self.plot_widget.clear()
+        self.plot_widget.plot(filtered_signal, pen={'color': 'r'})
         self.region.hide()
 
     def reset_graph(self):

@@ -816,9 +816,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.label_4.setVisible(True)
 
     def weiner(self):
-        weiner_window = Denoise(self.current_signal)
-        weiner_window.show()
-        
+        self.weiner_window = Denoise(self.current_signal)
+        self.weiner_window.show()
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     main = EqualizerApp()
