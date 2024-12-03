@@ -42,6 +42,19 @@ class Denoise(QWidget):
         self.region.hide()  # default is hidden till used
         self.plot_widget.addItem(self.region)
 
+        # Store initial y-range to keep it constant
+        self.initial_y_range = self.viewbox.viewRange()[1]
+
+    def on_range_changed(self):
+        """Custom zoom behavior: Restrict zoom to X-axis only."""
+        # Get the current range for x and y axes
+        x_range, y_range = self.viewbox.viewRange()
+
+        # Keep the Y range constant (store initial range when the window is created)
+        y_range_new = self.initial_y_range
+        
+        # Update the viewbox with only the X range adjusted
+        self.viewbox.setRange(xRange=x_range, yRange=y_range_new, padding=0)
     def wiener_filter(self, data , selected_range):
         start, end = selected_range
         start_idx = int(start)
