@@ -66,9 +66,29 @@ class Denoise(QWidget):
         start, end = selected_range
         start_idx = int(start)
         end_idx = int(end)
-        sub_signal = data[start_idx:end_idx + 1]
-        # apply wiener filter to the signal
-        return sg.wiener(sub_signal)
+        noise_segment = data[start_idx:end_idx + 1]
+        print("noise segmnent ", noise_segment)
+        signal_fft = np.fft.fft(data)
+        noise_fft = np.fft.fft(noise_segment, n=len(data))  # Zero-padding to match length
+        
+        #  power spectra
+        signal_power = np.abs(signal_fft) ** 2
+        noise_power = np.abs(noise_fft) ** 2
+        
+        # Compute the Wiener filter gain (signal power / (signal power + noise power))
+        gain = signal_power / (signal_power + noise_power)
+        print("gain",gain)
+        filtered_fft = signal_fft * gain
+        filtered_fft = filtered_fft-noise_fft
+
+        # Transform the result back to the time domain
+        filtered_signal = np.fft.ifft(filtered_fft)
+
+        print("original data ", data)
+        print("filtered data ", np.real(filtered_signal))
+        
+        return np.real(filtered_signal)
+
 
     def on_mouse_clicked(self, event):
         #mouse click
@@ -78,6 +98,7 @@ class Denoise(QWidget):
 
             if self.start_pos is None:  #1st click
                 self.start_pos = mouse_point.x()
+                self.start_idx = np.searchsorted(self.signal.time, mouse_point.x())
                 self.region.setRegion([self.start_pos, self.start_pos])  #start ur region
                 self.region.show()
 
@@ -88,9 +109,10 @@ class Denoise(QWidget):
 
             else:  #2nd click
                 self.end_pos = mouse_point.x()
+                self.end_idx = np.searchsorted(self.signal.time, mouse_point.x())
                 self.region.setRegion([self.start_pos, self.end_pos])  #end ur region
 
-                selected_range = (self.start_pos, self.end_pos)
+                selected_range = (self.start_idx, self.end_idx)
                 self.create_sub_signal(selected_range)
 
                 #reset after selection
@@ -144,4 +166,3 @@ class Denoise(QWidget):
     #     if event.key() == Qt.Key_Left:
 
     #     elif event.key() == Qt.Key_Right:
-
