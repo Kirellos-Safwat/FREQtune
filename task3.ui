@@ -311,12 +311,12 @@ color: rgb(255, 255, 255);
                         </item>
                         <item>
                          <property name="text">
-                          <string>Animal Sounds</string>
+                          <string>Vocal sounds</string>
                          </property>
                         </item>
                         <item>
                          <property name="text">
-                          <string>ECG Abnormalities</string>
+                          <string>Animals and Music</string>
                          </property>
                         </item>
                        </widget>
