@@ -316,7 +316,7 @@ color: rgb(255, 255, 255);
                         </item>
                         <item>
                          <property name="text">
-                          <string>ECG Abnormalities</string>
+                          <string>weiner</string>
                          </property>
                         </item>
                        </widget>

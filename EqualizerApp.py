@@ -19,6 +19,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
 import os
 import sys
+from denoise import Denoise
 plt.use('Qt5Agg')
 
 
@@ -103,7 +104,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.hear_eq_btn.clicked.connect(lambda: self.playMusic('equalized'))
         self.play_pause_btn.clicked.connect(lambda: self.play_pause())
         self.replay_btn.clicked.connect(lambda: self.replay())
-        self.zoom_in_btn.clicked.connect(lambda: self.zoom_in())
+        self.zoom_in_btn.clicked.connect(lambda: (self.zoom_in(), self.weiner()))
         self.zoom_out_btn.clicked.connect(lambda: self.zoom_out())
         self.speed_slider.valueChanged.connect(
             lambda: self.update_speed(self.speed_slider.value()))
@@ -121,7 +122,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
                               "Bat": [(6000, 12000)]
                               },
 
-            'ECG Abnormalities': {"Normal": [(0.5, 20)],
+            'weiner': {"Normal": [(0.5, 20)],
                                   "Ventricular couplets": [(0,8)],
                                   "Atrial Fibrillation" : [(59, 62)],
                                     "Bradycardia": [(75, 96)]
@@ -618,6 +619,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def combobox_activated(self):
         #get the selected item's text and display it in the label
         self.selected_mode = self.modes_combobox.currentText()
+        # if self.selected_mode == 'weiner':
+        #     weiner_window = Denoise(self.current_signal)
+        #     weiner_window.show()
+        #     return
         # store the mode in a global variable
         self.add_slider()
         self.Range_spliting()
@@ -761,6 +766,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
                 #update equalized signal's freq data
                 self.eqsignal.freq_data[1][start:end] = new_amp
+        elif self.selected_mode == 'weiner':
+            return
         else:
             start, end = self.current_signal.Ranges[slider_index]
 
@@ -808,7 +815,10 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.specto_frame_after.show()
             self.label_4.setVisible(True)
 
-
+    def weiner(self):
+        weiner_window = Denoise(self.current_signal)
+        weiner_window.show()
+        
 def main():
     app = QtWidgets.QApplication(sys.argv)
     main = EqualizerApp()
