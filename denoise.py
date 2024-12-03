@@ -32,15 +32,35 @@ class Denoise(QWidget):
         self.plot_widget = pg.PlotWidget()
         layout.addWidget(self.plot_widget)
         #disable mouse panning when performing selection
-        self.plot_widget.setMouseEnabled(x=False, y=False)
         self.plot_widget.scene().sigMouseClicked.connect(self.on_mouse_clicked)
 
+        self.plot_widget.setLimits(xMin=0, yMin=min(self.signal.data), yMax=max(self.signal.data))
         self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
         #create region item to highlight selected area
         self.region = pg.LinearRegionItem()
         self.region.setZValue(10)  
         self.region.hide()  # default is hidden till used
         self.plot_widget.addItem(self.region)
+        self.plot_widget.plotItem.vb.sigRangeChanged.connect(self.on_range_changed)
+
+        # Get the viewbox and connect the range change event
+        self.viewbox = self.plot_widget.getViewBox()
+        self.viewbox.setMouseEnabled(x=True, y=True)  # Enable mouse interaction only in X-direction
+        self.viewbox.sigRangeChanged.connect(self.on_range_changed)
+
+        # Store initial y-range to keep it constant
+        self.initial_y_range = self.viewbox.viewRange()[1]
+        
+    def on_range_changed(self):
+        """Custom zoom behavior: Restrict zoom to X-axis only."""
+        # Get the current range for x and y axes
+        x_range, y_range = self.viewbox.viewRange()
+
+        # Keep the Y range constant (store initial range when the window is created)
+        y_range_new = self.initial_y_range
+        
+        # Update the viewbox with only the X range adjusted
+        self.viewbox.setRange(xRange=x_range, yRange=y_range_new, padding=0)
 
     def wiener_filter(self, data , selected_range):
         start, end = selected_range
@@ -62,8 +82,6 @@ class Denoise(QWidget):
                 self.region.show()
 
                 #temporarily disable panning and zooming
-                self.plot_widget.setMouseEnabled(x=False, y=False)
-
                 if not self.mouse_move_connected:
                     self.plot_widget.scene().sigMouseMoved.connect(self.on_mouse_moved)
                     self.mouse_move_connected = True
@@ -114,7 +132,6 @@ class Denoise(QWidget):
         self.start_pos = None
         self.end_pos = None
         self.region.hide()  
-        self.plot_widget.setMouseEnabled(x=False, y=False)
 
         self.region = pg.LinearRegionItem()
         self.region.setZValue(10)  
@@ -122,6 +139,7 @@ class Denoise(QWidget):
         self.plot_widget.addItem(self.region)
 
     
+
     # def keyPressEvent(self, event):
     #     if event.key() == Qt.Key_Left:
 
