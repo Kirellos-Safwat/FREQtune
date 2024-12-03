@@ -89,6 +89,44 @@ class Denoise(QWidget):
         
         return np.real(filtered_signal)
 
+    def wiener_filter(self, data, noise_segment):
+        """
+        Apply Wiener filter for noise reduction.
+        :param data: Full signal data (1D numpy array).
+        :param noise_segment: Selected noise profile (1D numpy array).
+        :return: Denoised signal (1D numpy array).
+        """
+        # Compute FFT of signal and noise
+        signal_fft = np.fft.fft(data)
+        noise_fft = np.fft.fft(noise_segment, n=len(data))  # Zero-pad noise to match signal length
+
+        # Compute power spectra
+        signal_power = np.abs(signal_fft) ** 2
+        noise_power = np.abs(noise_fft) ** 2
+
+        # Compute Wiener filter gain
+        gain = signal_power / (signal_power + noise_power + 1e-10)  # Avoid division by zero
+        filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
+
+        # Transform back to the time domain
+        filtered_signal = np.fft.ifft(filtered_fft)
+
+        return np.real(filtered_signal)
+
+    def apply_noise_reduction(self):
+        """
+        Applies noise reduction to the full signal using the selected noise profile.
+        """
+        if self.sub_signal is None:
+            QMessageBox.warning(self, "Warning", "Please select a noise profile first!")
+            return
+
+        # Apply the Wiener filter
+        denoised_signal = self.wiener_filter(self.signal.data, self.sub_signal)
+
+        # Update the graph with the denoised signal
+        self.reset_graph()
+        self.plot_widget.plot(self.signal.time, denoised_signal, pen={'color': '#FF5733'})  # Denoised signal
 
     def on_mouse_clicked(self, event):
         #mouse click
@@ -144,27 +182,10 @@ class Denoise(QWidget):
         # plot
         # self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
         #hide region after selection
-        filtered_signal = self.noise_reduction(self.sub_signal)
         
         # Plot the denoised signal
-        self.plot_widget.clear()
-        self.plot_widget.plot(self.signal.time[start_idx:end_idx + 1], filtered_signal, pen={'color': 'r'})
         self.region.hide()
-
-    def noise_reduction(self, signal_data):
-        # Apply a high-pass filter as an example for noise reduction
-        # Design a high-pass filter to remove low-frequency noise
-        fs = 1000  # Example sample rate
-        cutoff = 50  # High-pass cutoff frequency in Hz
-        
-        # Create a high-pass filter using scipy
-        nyquist = 0.5 * fs
-        normal_cutoff = cutoff / nyquist
-        b, a = sg.butter(1, normal_cutoff, btype='high', analog=False)
-        
-        # Apply the filter to the signal
-        filtered_signal = sg.filtfilt(b, a, signal_data)
-        return filtered_signal
+        self.apply_noise_reduction()
 
     def reset_graph(self):
         self.plot_widget.clear()
