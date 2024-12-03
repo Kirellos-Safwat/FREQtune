@@ -111,22 +111,18 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.checkBox.stateChanged.connect(lambda: self.hide())
         self.dictionary = {
             'Uniform Range': {},
-            'Musical Instruments': {"Piano": [(0, 620),(780,800)],
-                                    "Opera": [(620, 780),(800,950),(1500,2080),(2160,3140),(3210,4250)],
-                                    "Xylophone ": [(950, 1040), (1100,1500)],
-                                    "Clarinet": [(1040, 1100), (2080,2160),(3140,3210)]
-                                    },
-            "Animal Sounds": {"Wolf": [(0, 800)],
-                              "Bird": [(2000, 4000)],
-                              "Cat": [(800,2000),(4000, 6000)],
-                              "Bat": [(6000, 12000)]
+            "Vocal sounds": {"letter 'th' ": [(500, 700)], # letter th
+                            "guitar": [(1000, 3000)],
+                            "Piano": [(200, 500),(700,1000)],
+                            "letter e": [(3500, 4000)],
+                            "letter 's' ": [(6000,8000)]
                               },
 
-            'weiner': {"Normal": [(0.5, 20)],
-                                  "Ventricular couplets": [(0,8)],
-                                  "Atrial Fibrillation" : [(59, 62)],
-                                    "Bradycardia": [(75, 96)]
-                                  }
+            'Animals and Music': {"Wolf": [(0, 800)],
+                                "Bat": [(6000, 12000)],
+                                "Xylophone ": [(950, 1040), (1100,1500)],
+                                "Clarinet": [(1040, 1100), (2080,2160),(3140,3210)]
+                               }
 
         }
 
@@ -619,10 +615,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def combobox_activated(self):
         #get the selected item's text and display it in the label
         self.selected_mode = self.modes_combobox.currentText()
-        # if self.selected_mode == 'weiner':
-        #     weiner_window = Denoise(self.current_signal)
-        #     weiner_window.show()
-        #     return
+        if self.selected_mode == 'weiner':
+            self.weiner()
         # store the mode in a global variable
         self.add_slider()
         self.Range_spliting()

@@ -306,17 +306,17 @@ color: rgb(255, 255, 255);
                         </item>
                         <item>
                          <property name="text">
-                          <string>Musical Instruments</string>
-                         </property>
-                        </item>
-                        <item>
-                         <property name="text">
-                          <string>Animal Sounds</string>
-                         </property>
-                        </item>
-                        <item>
-                         <property name="text">
                           <string>weiner</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Vocal sounds</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Animals and Music</string>
                          </property>
                         </item>
                        </widget>
