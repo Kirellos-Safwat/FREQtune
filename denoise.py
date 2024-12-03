@@ -50,7 +50,7 @@ class Denoise(QWidget):
 
         # Store initial y-range to keep it constant
         self.initial_y_range = self.viewbox.viewRange()[1]
-        
+
     def on_range_changed(self):
         """Custom zoom behavior: Restrict zoom to X-axis only."""
         # Get the current range for x and y axes
@@ -76,9 +76,9 @@ class Denoise(QWidget):
         noise_power = np.abs(noise_fft) ** 2
         
         # Compute the Wiener filter gain (signal power / (signal power + noise power))
-        gain = signal_power / (signal_power + noise_power)
-        print("gain",gain)
-        filtered_fft = signal_fft * gain
+        # gain = signal_power / (signal_power + noise_power)
+        # print("gain",gain)
+        # filtered_fft = signal_fft * gain
         filtered_fft = filtered_fft-noise_fft
 
         # Transform the result back to the time domain
@@ -144,10 +144,27 @@ class Denoise(QWidget):
         # plot
         # self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
         #hide region after selection
-        filtered_signal = self.wiener_filter(self.signal.data, selected_range)
+        filtered_signal = self.noise_reduction(self.sub_signal)
+        
+        # Plot the denoised signal
         self.plot_widget.clear()
-        self.plot_widget.plot(filtered_signal, pen={'color': 'r'})
+        self.plot_widget.plot(self.signal.time[start_idx:end_idx + 1], filtered_signal, pen={'color': 'r'})
         self.region.hide()
+
+    def noise_reduction(self, signal_data):
+        # Apply a high-pass filter as an example for noise reduction
+        # Design a high-pass filter to remove low-frequency noise
+        fs = 1000  # Example sample rate
+        cutoff = 50  # High-pass cutoff frequency in Hz
+        
+        # Create a high-pass filter using scipy
+        nyquist = 0.5 * fs
+        normal_cutoff = cutoff / nyquist
+        b, a = sg.butter(1, normal_cutoff, btype='high', analog=False)
+        
+        # Apply the filter to the signal
+        filtered_signal = sg.filtfilt(b, a, signal_data)
+        return filtered_signal
 
     def reset_graph(self):
         self.plot_widget.clear()
