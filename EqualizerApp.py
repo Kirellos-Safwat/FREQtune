@@ -11,6 +11,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 import pandas as pd
 import copy
+import soundfile as sf
+import librosa
 from PyQt5.QtWidgets import QHBoxLayout, QLabel
 import matplotlib as plt
 import pyqtgraph as pg
@@ -111,7 +113,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.zoom_out_btn.clicked.connect(lambda: self.zoom_out())
         self.speed_slider.valueChanged.connect(
             lambda: self.update_speed(self.speed_slider.value()))
-        self.checkBox.stateChanged.connect(lambda: self.hide())
+        self.checkBox.stateChanged.connect(lambda: (self.hide(), self.export_signal()))
         self.dictionary = {
         'Uniform Range': {},  
         'Vocal sounds': {  
@@ -222,16 +224,17 @@ class EqualizerApp(QtWidgets.QMainWindow):
             Duration = librosa.get_duration(y=data, sr=sample_rate)
             time = np.linspace(0, Duration, len(data))
             self.audio_path = path
-
-        # elif it is a signal (ECG)    
-        elif type_ == "csv":
-            signal_data = pd.read_csv(path)
-            time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
-            data = np.array(signal_data.iloc[:, 1].astype(float).tolist())
-            if len(time) > 1:
-                sample_rate = 1 / (time[1]-time[0])
-            else:
-                sample_rate = 1
+        else:
+            return
+        # # elif it is a signal (ECG)    
+        # elif type_ == "csv":
+        #     signal_data = pd.read_csv(path)
+        #     time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
+        #     data = np.array(signal_data.iloc[:, 1].astype(float).tolist())
+        #     if len(time) > 1:
+        #         sample_rate = 1 / (time[1]-time[0])
+        #     else:
+        #         sample_rate = 1
 
         # create "Signal" instance and set its attributes
         self.current_signal = SignalGenerator(signal_name, data=data,
@@ -262,6 +265,24 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.eqsignal = copy.deepcopy(self.current_signal)
 
         self.combobox_activated()
+
+    def export_signal(self):
+    # def export_wav(self):
+        if self.equalized_bool is None:
+            return  # No signal loaded
+
+        # Get the processed audio data and sample rate
+        data = self.time_eq_signal.data
+        sample_rate = self.eqsignal.sample_rate
+
+        # Open a dialog to save the file
+        path_info = QtWidgets.QFileDialog.getSaveFileName(None, "Save Signal", os.getenv('HOME'), filter="WAV Files (*.wav)")
+        path = path_info[0]
+
+        if path:
+            # Save the audio data to a .wav file
+            sf.write(path, data, sample_rate)
+            print(f"File saved to {path}")
 
     def get_Fourier(self, T, data):
         N = len(data)  # bec FFT depends on #data_points in signal
