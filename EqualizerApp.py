@@ -107,7 +107,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.hear_eq_btn.clicked.connect(lambda: self.playMusic('equalized'))
         self.play_pause_btn.clicked.connect(lambda: self.play_pause())
         self.replay_btn.clicked.connect(lambda: self.replay())
-        self.zoom_in_btn.clicked.connect(lambda: (self.zoom_in(), self.weiner()))
+        self.zoom_in_btn.clicked.connect(lambda: (self.zoom_in()))
         self.zoom_out_btn.clicked.connect(lambda: self.zoom_out())
         self.speed_slider.valueChanged.connect(
             lambda: self.update_speed(self.speed_slider.value()))
@@ -338,7 +338,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
 
             # self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
-            self.frequency_graph.setLabel('left', 'Magnitude')
+            self.frequency_graph.setLabel('left', 'Magnitude (dB)')
 
             if not self.linear_frequency_scale:  
                 self.frequency_graph.clear()
@@ -437,18 +437,18 @@ class EqualizerApp(QtWidgets.QMainWindow):
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                 extent=[t[0], t[-1], f[-1], f[0]])
 
-        if max_amplitude == 0:
-            y_ticks = [0]  # Or any default
-        else:
-            y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
+        # if max_amplitude == 0:
+        #     y_ticks = [0]  # Or any default
+        # else:
+        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
 
 
-        cbar = fig.colorbar(cax, ax=ax, format='%.2f')
-        cbar.set_label('Amplitude', color='white')
+        cbar = fig.colorbar(cax, ax=ax, format='%.3f')
+        cbar.set_label('Amplitude (dB)', color='white')
 
         def custom_ticks(val, pos):
             # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
-            return f'{val:.2f}'  # Customize this as needed
+            return f'{val:.3f}'  # Customize this as needed
         
         cbar.ax.tick_params(labelsize=10, labelcolor='white')
         cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
