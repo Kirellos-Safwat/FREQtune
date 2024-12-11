@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QLabel
 import matplotlib as plt
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtCore, uic
+from PyQt5.QtGui import QIcon
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
 import os
@@ -27,6 +28,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(EqualizerApp, self).__init__(*args, **kwargs)
         uic.loadUi(r'task3.ui', self)
+        self.setWindowIcon(QIcon("imgs/logo.png"))
+
         self.is_playing = False  #keeps track of whether audio is playing/paused
         self.playback_speed = 1.0 #normal playback speed is default
         self.original_graph.setBackground("black")
@@ -110,21 +113,22 @@ class EqualizerApp(QtWidgets.QMainWindow):
             lambda: self.update_speed(self.speed_slider.value()))
         self.checkBox.stateChanged.connect(lambda: self.hide())
         self.dictionary = {
-            'Uniform Range': {},
-            "Vocal sounds": {"letter 'th' ": [(500, 700)], # letter th
-                            "guitar": [(1000, 3000)],
-                            "Piano": [(200, 500),(700,1000)],
-                            "letter e": [(3500, 4000)],
-                            "letter 's' ": [(6000,8000)]
-                              },
-
-            'Animals and Music': {"Wolf": [(0, 800)],
-                                "Bat": [(6000, 12000)],
-                                "Xylophone ": [(950, 1040), (1100,1500)],
-                                "Clarinet": [(1040, 1100), (2080,2160),(3140,3210)]
-                               }
-
+        'Uniform Range': {},  
+        'Vocal sounds': {  
+            '🇹🇭 sound': [(500, 700)],  
+            '🎸 Guitar': [(1000, 3000)],  
+            '🎹 Piano': [(200, 500), (700, 1000)],  
+            '𝐄 sound': [(3500, 4000)],   
+            '🆂 sound': [(6000, 8000)]  
+        },
+        'Animals and Music': {  
+            '🐺 Wolf': [(0, 800)],  
+            '🦇 Bat': [(6000, 12000)],  
+            '🎼 Xylophone': [(950, 1040), (1100, 1500)], 
+            '🎶 Clarinet': [(1040, 1100), (2080, 2160), (3140, 3210)]  
         }
+}
+
 
     def zoom_graph(self, event):
         if self.current_signal is None:
