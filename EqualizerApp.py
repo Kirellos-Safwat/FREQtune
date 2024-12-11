@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QLabel
 import matplotlib as plt
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtCore, uic
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
 import os
@@ -115,17 +115,17 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.dictionary = {
         'Uniform Range': {},  
         'Vocal sounds': {  
-            '🇹🇭 sound': [(500, 700)],  
-            '🎸 Guitar': [(1000, 3000)],  
-            '🎹 Piano': [(200, 500), (700, 1000)],  
-            '𝐄 sound': [(3500, 4000)],   
-            '🆂 sound': [(6000, 8000)]  
+            'TH sound': [(500, 700)],  
+            'Guitar': [(1000, 3000)],  
+            'Piano': [(200, 500), (700, 1000)],  
+            'E sound': [(3500, 4000)],   
+            'S sound': [(6000, 8000)]  
         },
         'Animals and Music': {  
-            '🐺 Wolf': [(0, 800)],  
-            '🦇 Bat': [(6000, 12000)],  
-            '🎼 Xylophone': [(950, 1040), (1100, 1500)], 
-            '🎶 Clarinet': [(1040, 1100), (2080, 2160), (3140, 3210)]  
+            'Wolf': [(0, 800)],  
+            'Bat': [(6000, 12000)],  
+            'Xylophone': [(950, 1040), (1100, 1500)], 
+            'Clarinet': [(1040, 1100), (2080, 2160), (3140, 3210)]  
         }
 }
 
@@ -635,15 +635,36 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def add_slider(self):
         self.clear_layout(self.frame_layout)
         dictionary = self.dictionary[self.selected_mode]
+
         for i, (key, _) in enumerate(dictionary.items()):
-            label = QLabel(str(key))  #create a label with a unique identifier
+            label = QLabel()
+
+            if self.selected_mode == 'Uniform Range':
+                # Use text labels for Uniform Range mode
+                label.setText(str(key))
+            else:
+                # Use icons for other modes
+                icon_path = f"icons/{key}.png"
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    label.setPixmap(pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                else:
+                    label.setText(str(key))  # Fallback to text if image is not found
+
             slider_creator = Slider(i)
             slider = slider_creator.get_slider()
             self.slider_gain[i] = 10
+
             slider.valueChanged.connect(
-                lambda value, i=i: self.update_slider_value(i, value/10))
+                lambda value, i=i: self.update_slider_value(i, value / 10)
+            )
+
+            # Add the label and slider to the layout
             self.frame_layout.addWidget(slider)
             self.frame_layout.addWidget(label)
+
+
+
 
     def update_slider_value(self, slider_index, value):
         self.slider_gain[slider_index] = value
