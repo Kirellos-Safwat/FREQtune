@@ -113,16 +113,16 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.dictionary = {
         'Uniform Range': {},  
         'Vocal sounds': {  
-            'TH sound': [(500, 700)],  
-            'Guitar': [(1000, 3000)],  
-            'Piano': [(200, 500), (700, 1000)],  
-            'E sound': [(3500, 4000)],   
-            'S sound': [(6000, 8000)]  
+            'A sound': [(600, 800),(2570, 2650),(3250,3400),(3650,3750),(4000,4100),(4400,4550),(6000,7000)],  
+            # 'Guitar': [(1000, 3000)],  
+            # 'Piano': [(200, 500), (700, 1000)],  
+            'I sound': [(800, 950),(1350,1450),(1600,1700),(1100,1150)],   
+            # 'S sound': [(6000, 8000)]  
         },
         'Animals and Music': {  
             "Piano": [(0, 600)],
             "Opera": [(620, 950),(1400,1700),(2160,2600)],
-            "Xylophone ": [(950, 1100), (1200,1500)],
+            "Xylophone": [(950, 1100), (1200,1500)],
             "Bird": [(2600, 4500)],
             "Cat": [(600,620),(1100,1200),(1700,2160),(4500, 6000)],
             "Bat": [(6000, 12000)]
@@ -181,17 +181,17 @@ class EqualizerApp(QtWidgets.QMainWindow):
             Duration = librosa.get_duration(y=data, sr=sample_rate)
             time = np.linspace(0, Duration, len(data))
             self.audio_path = path
-        else:
-            return
-        # # elif it is a signal (ECG)    
-        # elif type_ == "csv":
-        #     signal_data = pd.read_csv(path)
-        #     time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
-        #     data = np.array(signal_data.iloc[:, 1].astype(float).tolist())
-        #     if len(time) > 1:
-        #         sample_rate = 1 / (time[1]-time[0])
-        #     else:
-        #         sample_rate = 1
+        # else:
+        #     return
+        # elif it is a signal (ECG)    
+        elif type_ == "csv":
+            signal_data = pd.read_csv(path)
+            time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
+            data = np.array(signal_data.iloc[:, 1].astype(float).tolist())
+            if len(time) > 1:
+                sample_rate = 1 / (time[1]-time[0])
+            else:
+                sample_rate = 1
 
         # create "Signal" instance and set its attributes
         self.current_signal = SignalGenerator(signal_name, data=data,
