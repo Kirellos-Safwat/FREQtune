@@ -419,21 +419,21 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # if max_amplitude == 0:
         #     y_ticks = [0]  # Or any default
         # else:
-        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
+        # y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
 
 
-        cbar = fig.colorbar(cax, ax=ax, format='%.3f')
+        cbar = fig.colorbar(cax, ax=ax, ticks=[])
         cbar.set_label('Amplitude (dB)', color='white')
 
-        def custom_ticks(val, pos):
-            # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
-            return f'{val:.3f}'  # Customize this as needed
+        # def custom_ticks(val, pos):
+        #     # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
+        #     return f'{val:.3f}'  # Customize this as needed
         
-        cbar.ax.tick_params(labelsize=10, labelcolor='white')
-        cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
+        # cbar.ax.tick_params(labelsize=10, labelcolor='white')
+        # cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
 
-        ax.tick_params(axis='x', labelcolor='white')  # Set x-tick labels to white
-        ax.tick_params(axis='y', labelcolor='white')
+        # ax.tick_params(axis='x', labelcolor='white')  # Set x-tick labels to white
+        # ax.tick_params(axis='y', labelcolor='white')
 
         ax.invert_yaxis()
         # ax.set_ylabel("Frequency (Hz)", color='white')
