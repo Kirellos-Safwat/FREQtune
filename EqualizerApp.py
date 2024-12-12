@@ -75,10 +75,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.original_graph.setMouseTracking(True)
         self.equalized_graph.setMouseTracking(True)
 
-        #overriding mouse wheel events
-        self.original_graph.wheelEvent = self.zoom_graph
-        self.equalized_graph.wheelEvent = self.zoom_graph
-
         #connecting mouse events to handlers
         self.original_graph.mousePressEvent = self.mousePressEvent
         self.original_graph.mouseMoveEvent = self.mouseMoveEvent
@@ -132,60 +128,19 @@ class EqualizerApp(QtWidgets.QMainWindow):
             "Bat": [(6000, 12000)]
         }
 }
+        # Get the viewbox and connect the range change event
+        self.original_graph.getViewBox().setMouseEnabled(x=True, y=False)  # Enable mouse interaction only in X-direction
+        self.original_graph.getViewBox().sigRangeChanged.connect(lambda: self.sync_range('original'))
+        self.equalized_graph.getViewBox().setMouseEnabled(x=True, y=False)
+        self.equalized_graph.getViewBox().sigRangeChanged.connect(lambda: self.sync_range('equalized'))
 
-
-    def zoom_graph(self, event):
-        if self.current_signal is None:
-            return
-        zoom_factor = 1.1
-        delta = event.angleDelta().y()  #get wheel movement direction
-
-        #determine whether to zoom in or out
-        if delta > 0:
-            scale_factor = 1 / zoom_factor  #zoom in
+    def sync_range(self, source_graph='original'): #syncs any changes for both original and equalized graphs
+        if source_graph == 'original':
+            range_ = self.original_graph.getViewBox().viewRange()
+            self.equalized_graph.getViewBox().setXRange(*range_[0], padding=0)
         else:
-            scale_factor = 0.5 #zoom out
-            original_view_range = self.original_graph.getViewBox().viewRange() #return current view range of x,y limits as follows:
-            current_x_min, current_x_max = original_view_range[0]
-            current_y_min, current_y_max = original_view_range[1]
-
-            if len(self.current_signal.time) == 0:
-                return  #if signal doesn't have any time data, do nothing
-
-            #set signal length to last time point
-            signal_length = self.current_signal.time[-1]
-
-            signal_y_min = np.min(self.current_signal.data)
-            signal_y_max = np.max(self.current_signal.data)
-
-            new_x_min = current_x_min - (current_x_min * scale_factor)
-            new_x_max = current_x_max - (current_x_max * scale_factor)
-
-            new_y_min = current_y_min + (current_y_min * scale_factor)
-            new_y_max = current_y_max + (current_y_max * scale_factor)
-
-            if new_x_min < 0 or new_x_max > signal_length:
-                return
-
-            if new_y_min < signal_y_min:
-                new_y_min = signal_y_min
-            if new_y_max > signal_y_max:
-                new_y_max = signal_y_max
-
-            self.original_graph.getViewBox().setYRange(new_y_min, new_y_max)
-
-            scale_factor = zoom_factor  
-
-        #apply scaling with zoom_factor to both graphs
-        self.original_graph.getViewBox().scaleBy((scale_factor, scale_factor))
-        self.equalized_graph.getViewBox().scaleBy((scale_factor, scale_factor))
-
-        self.sync_range()
-
-    def sync_range(self): #syncs any changes for both original and equalized graphs
-        range_ = self.original_graph.getViewBox().viewRange()
-        self.equalized_graph.getViewBox().setXRange(*range_[0], padding=0)
-        self.equalized_graph.getViewBox().setYRange(*range_[1], padding=0)
+            range_ = self.equalized_graph.getViewBox().viewRange()
+            self.original_graph.getViewBox().setXRange(*range_[0], padding=0)
 
     def event(self, event): # to detect mouse press / release / move for panning and zooming
         return super().event(event)
@@ -345,6 +300,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 graph.plotItem.legend.clear()
             legend = graph.addLegend()
             legend.addItem(plot_item, name=f"{signal.name}")
+            self.sync_range()
 
     def plot_freq(self):
         if self.current_signal is None:
@@ -824,8 +780,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.eqsignal.freq_data[1][start:end] = new_amp
 
         
-        self.time_eq_signal.data = self.recovered_signal(   #update time equalized signal
-            self.eqsignal.freq_data[1], self.current_signal.phase)
+        self.time_eq_signal.data = self.recovered_signal(self.eqsignal.freq_data[1])
 
         
         excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
@@ -865,14 +820,13 @@ class EqualizerApp(QtWidgets.QMainWindow):
         
     def noise_reduction(self):
         self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
-        # self.weiner_window.close()
-        # self.weiner_window = None
         excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
 
         self.Plot("equalized")  #plot equalized signal
         self.plot_spectrogram(
             self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
+        self.weiner_window.close()
 
     def wiener_filter(self):
         # Compute FFT of signal and noise
