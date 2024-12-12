@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 from pyqtgraph.exporters import ImageExporter
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QLabel, QHBoxLayout, QFileDialog, QMessageBox
 import pyqtgraph as pg
 from PyQt5.QtCore import Qt
@@ -10,13 +10,14 @@ from scipy import signal as sg
 
 
 class Denoise(QWidget):
+    filter_signal = QtCore.pyqtSignal()  
     def __init__(self, signal):
         super().__init__()
         self.signal = signal
         #storing starting and ending points of selection
         self.start_pos = None
         self.end_pos = None
-        self.sub_signal = None
+        self.noise_profile = None
 
         #disable mouse panning when performing selection
         self.mouse_move_connected = False
@@ -61,45 +62,6 @@ class Denoise(QWidget):
         
         # Update the viewbox with only the X range adjusted
         self.viewbox.setRange(xRange=x_range, yRange=y_range_new, padding=0)
-
-    def wiener_filter(self, data, noise_segment):
-        """
-        Apply Wiener filter for noise reduction.
-        :param data: Full signal data (1D numpy array).
-        :param noise_segment: Selected noise profile (1D numpy array).
-        :return: Denoised signal (1D numpy array).
-        """
-        # Compute FFT of signal and noise
-        signal_fft = np.fft.fft(data)
-        noise_fft = np.fft.fft(noise_segment, n=len(data))  # Zero-pad noise to match signal length
-
-        # Compute power spectra
-        signal_power = np.abs(signal_fft) ** 2
-        noise_power = np.abs(noise_fft) ** 2
-
-        # Compute Wiener filter gain
-        gain = signal_power / (signal_power + noise_power + 1e-10)  # Avoid division by zero
-        filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
-
-        # Transform back to the time domain
-        filtered_signal = np.fft.ifft(filtered_fft)
-
-        return np.real(filtered_signal)
-
-    def apply_noise_reduction(self):
-        """
-        Applies noise reduction to the full signal using the selected noise profile.
-        """
-        if self.sub_signal is None:
-            QMessageBox.warning(self, "Warning", "Please select a noise profile first!")
-            return
-
-        # Apply the Wiener filter
-        denoised_signal = self.wiener_filter(self.signal.data, self.sub_signal)
-
-        # Update the graph with the denoised signal
-        self.reset_graph()
-        self.plot_widget.plot(self.signal.time, denoised_signal, pen={'color': '#FF5733'})  # Denoised signal
 
     def on_mouse_clicked(self, event):
         #mouse click
@@ -151,25 +113,41 @@ class Denoise(QWidget):
         if start_idx > end_idx:  
             start_idx, end_idx = end_idx, start_idx
         #extraction of sub-signal
-        self.sub_signal  = self.signal.data[start_idx:end_idx + 1]
+        self.noise_profile  = self.signal.data[start_idx:end_idx + 1]
         # plot
-        # self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
-        #hide region after selection
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setText("Noise profile selected")
+        msg_box.setWindowTitle("Information")
+        
+        # Add custom buttons for glue
+        reset_button = msg_box.addButton("Reset", QMessageBox.ActionRole)
+        continue_button = msg_box.addButton("Done", QMessageBox.AcceptRole)
+        # Execute message box
+        msg_box.exec_()
+        # know which button was clicked
+        if msg_box.clickedButton() == reset_button:
+            self.reset_graph()
+            return
         
         # Plot the denoised signal
         self.region.hide()
-        self.apply_noise_reduction()
+        if self.noise_profile is None:
+            QMessageBox.warning(self, "Warning", "Please select a noise profile first!")
+            return
+        self.filter_signal.emit()
 
     def reset_graph(self):
         self.plot_widget.clear()
         self.start_pos = None
         self.end_pos = None
         self.region.hide()  
-
+        self.noise_profile = None
         self.region = pg.LinearRegionItem()
         self.region.setZValue(10)  
         self.region.hide()  #default is hidden till used
         self.plot_widget.addItem(self.region)
+        self.plot_widget.plot(self.signal.time, self.signal.data, pen={'color': '#3D8262'})
 
     
 

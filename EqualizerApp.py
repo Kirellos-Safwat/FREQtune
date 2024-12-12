@@ -642,6 +642,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.selected_mode = self.modes_combobox.currentText()
         if self.selected_mode == 'weiner':
             self.weiner()
+            return
         # store the mode in a global variable
         self.add_slider()
         self.Range_spliting()
@@ -834,11 +835,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.plot_spectrogram(
             self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
 
-    def recovered_signal(self, Amp, phase):
+    def recovered_signal(self, Amp):
         # complex array from amp and phase combination
         # N/2 as we get amp from fourier by multiplying it with fraction 2/N
         Amp = Amp * len(self.current_signal.data)/2
-        complex_value = Amp * np.exp(1j*phase)
+        complex_value = Amp * np.exp(1j*self.current_signal.phase)
         # taking inverse fft to get recover signal
         recovered_signal = np.fft.irfft(complex_value)
         return (recovered_signal)
@@ -858,6 +859,35 @@ class EqualizerApp(QtWidgets.QMainWindow):
     def weiner(self):
         self.weiner_window = Denoise(self.current_signal)
         self.weiner_window.show()
+        self.weiner_window.filter_signal.connect(self.noise_reduction)
+        
+    def noise_reduction(self):
+        self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
+        # self.weiner_window.close()
+        # self.weiner_window = None
+        excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
+        self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
+
+        self.Plot("equalized")  #plot equalized signal
+        self.plot_spectrogram(
+            self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
+
+    def wiener_filter(self):
+        # Compute FFT of signal and noise
+        N = len(self.current_signal.data)
+        signal_fft = self.current_signal.freq_data[1]
+        freq_amp = np.fft.fft(self.weiner_window.noise_profile, n=N)
+        noise_fft = (2/N)*(np.abs(freq_amp[:N//2]))
+
+        # Compute power spectra
+        signal_power = np.abs(signal_fft) ** 2
+        noise_power = np.abs(noise_fft) ** 2
+
+        # Compute Wiener filter gain
+        gain = signal_power / (signal_power + noise_power + 1e-10)  # Avoid division by zero
+        filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
+        return filtered_fft
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
