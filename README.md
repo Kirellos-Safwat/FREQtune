@@ -69,7 +69,7 @@ The application supports multiple modes to cater to different use cases:
 
 3. Run the application:
    ```bash
-   python Equalizer.py
+   python EqualizerApp.py
    ```
 
 4. Use the UI to:
