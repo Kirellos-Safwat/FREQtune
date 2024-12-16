@@ -22,6 +22,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
 import os
 import sys
+from scipy.signal import spectrogram, istft
 from denoise import Denoise
 plt.use('Qt5Agg')
 
@@ -181,8 +182,6 @@ class EqualizerApp(QtWidgets.QMainWindow):
             Duration = librosa.get_duration(y=data, sr=sample_rate)
             time = np.linspace(0, Duration, len(data))
             self.audio_path = path
-        # else:
-        #     return
         # elif it is a signal (ECG)    
         elif type_ == "csv":
             signal_data = pd.read_csv(path)
@@ -192,6 +191,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 sample_rate = 1 / (time[1]-time[0])
             else:
                 sample_rate = 1
+        else:
+            return
 
         # create "Signal" instance and set its attributes
         self.current_signal = SignalGenerator(signal_name, data=data,
@@ -815,10 +816,11 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.weiner_window.filter_signal.connect(self.noise_reduction)
         
     def noise_reduction(self):
-        self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
+        # self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
+        self.time_eq_signal.data = self.spectral_subtraction(self.weiner_window.noise_profile)
         excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
-
+        self.equalized_bool = True
         self.Plot("equalized")  #plot equalized signal
         self.plot_spectrogram(
             self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
@@ -840,6 +842,61 @@ class EqualizerApp(QtWidgets.QMainWindow):
         filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
         return filtered_fft
 
+    def spectral_subtraction(self, noise_profile, alpha=0.8, floor=1e-8):
+        """
+        Applies Spectral Subtraction to reduce noise in the signal using a noise profile.
+        
+        Parameters:
+            noisy_signal (np.array): The noisy signal (input signal with noise).
+            noise_profile (np.array): The noise profile (a clean sample of noise).
+            sampling_rate (int): The sampling rate of the signals (samples per second).
+            alpha (float): Over-subtraction factor to adjust noise reduction strength.
+            floor (float): Minimum value for the magnitude to avoid negative values.
+        
+        Returns:
+            np.array: The denoised signal.
+        """
+        noisy_signal = self.current_signal.data
+        sampling_rate = self.current_signal.sample_rate
+        
+        # Step 1: Compute the spectrogram of the noisy signal and noise profile
+        nperseg = 1024
+        noverlap = nperseg // 2  # 50% overlap
+        f, t, Sxx_noisy = spectrogram(noisy_signal, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
+        _, _, Sxx_noise = spectrogram(noise_profile, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
+        
+        # Step 2: Estimate the noise power spectrum (mean over time)
+        noise_power_spectrum = np.mean(Sxx_noise, axis=1)
+        
+        # Step 3: Align the noise power spectrum to match the frequency bins of noisy signal's spectrogram
+        if noise_power_spectrum.shape[0] != Sxx_noisy.shape[0]:
+            noise_power_spectrum = np.interp(f, f[:len(noise_power_spectrum)], noise_power_spectrum)
+        
+        # Step 4: Compute the magnitude and phase of the noisy signal's spectrogram
+        mag_noisy = np.abs(Sxx_noisy)
+        phase_noisy = np.angle(Sxx_noisy)
+        
+        # Spectral subtraction (magnitude)
+        mag_subtracted = mag_noisy - alpha * noise_power_spectrum[:, np.newaxis]
+        
+        # Apply floor to avoid negative magnitudes
+        mag_subtracted = np.maximum(mag_subtracted, floor)
+        
+        # Step 5: Optionally apply spectral smoothing to reduce sharp transitions
+        # Apply a simple moving average smoothing to the magnitudes
+        smoothing_window = 5
+        mag_subtracted = np.apply_along_axis(lambda x: np.convolve(x, np.ones(smoothing_window)/smoothing_window, mode='same'), axis=1, arr=mag_subtracted)
+        
+        # Step 6: Reconstruct the time-domain signal using ISTFT
+        Sxx_filtered = mag_subtracted * np.exp(1j * phase_noisy)
+        
+        # Apply ISTFT with the same nperseg and noverlap parameters to maintain consistent time resolution
+        _, filtered_signal = istft(Sxx_filtered, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
+        
+        # Normalize the filtered signal to avoid very quiet output
+        filtered_signal = filtered_signal / np.max(np.abs(filtered_signal))  # Normalize to [-1, 1]
+        
+        return filtered_signal
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
