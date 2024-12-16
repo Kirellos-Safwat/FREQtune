@@ -816,8 +816,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.weiner_window.filter_signal.connect(self.noise_reduction)
         
     def noise_reduction(self):
-        # self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
-        self.time_eq_signal.data = self.spectral_subtraction(self.weiner_window.noise_profile)
+        self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
+        # self.time_eq_signal.data = self.spectral_subtraction(self.weiner_window.noise_profile)
         excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
         self.equalized_bool = True
@@ -825,78 +825,42 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.plot_spectrogram(
             self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
         self.weiner_window.close()
-
+    
     def wiener_filter(self):
         # Compute FFT of signal and noise
         N = len(self.current_signal.data)
         signal_fft = self.current_signal.freq_data[1]
-        freq_amp = np.fft.fft(self.weiner_window.noise_profile, n=N)
-        noise_fft = (2/N)*(np.abs(freq_amp[:N//2]))
+
+        # freq_amp = np.fft.fft(self.weiner_window.noise_profile, n=N)
+        noise_fft = np.fft.fft(self.weiner_window.noise_profile, n=N)
+        noise_fft = (2/N) * (np.abs(noise_fft[:N//2]))
 
         # Compute power spectra
         signal_power = np.abs(signal_fft) ** 2
         noise_power = np.abs(noise_fft) ** 2
 
-        # Compute Wiener filter gain
-        gain = signal_power / (signal_power + noise_power + 1e-10)  # Avoid division by zero
-        filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
-        return filtered_fft
+        window_size = 25  # Adjust this value based on your needs
+        signal_power_smooth = np.convolve(signal_power, np.ones(window_size)/window_size, mode='same')
+        noise_power_smooth = np.convolve(noise_power, np.ones(window_size)/window_size, mode='same')
+        
+        # Compute SNR (Signal-to-Noise Ratio)
+        snr = signal_power_smooth / (noise_power_smooth + 1e-10)
+        
+        # Apply adaptive threshold
+        snr_threshold = 0.3  # Adjust this threshold based on your needs
+        gain = np.maximum(1 - 1/(snr + 1), 0)  # Modified Wiener filter gain
+        gain[snr < snr_threshold] *= 0.5  # Suppress frequencies with low SNR
+        
+        # Apply oversubtraction factor for noise reduction
+        alpha = 10.0  # Oversubtraction factor
+        gain = np.maximum(1 - alpha * (noise_power_smooth / (signal_power_smooth + 1e-10)), 0.1)
+        gain = np.tanh(gain)  # Smooth out the gain with a soft threshold
 
-    def spectral_subtraction(self, noise_profile, alpha=0.8, floor=1e-8):
-        """
-        Applies Spectral Subtraction to reduce noise in the signal using a noise profile.
         
-        Parameters:
-            noisy_signal (np.array): The noisy signal (input signal with noise).
-            noise_profile (np.array): The noise profile (a clean sample of noise).
-            sampling_rate (int): The sampling rate of the signals (samples per second).
-            alpha (float): Over-subtraction factor to adjust noise reduction strength.
-            floor (float): Minimum value for the magnitude to avoid negative values.
+        # Apply the filter with frequency-dependent smoothing
+        filtered_fft = signal_fft * gain
         
-        Returns:
-            np.array: The denoised signal.
-        """
-        noisy_signal = self.current_signal.data
-        sampling_rate = self.current_signal.sample_rate
-        
-        # Step 1: Compute the spectrogram of the noisy signal and noise profile
-        nperseg = 1024
-        noverlap = nperseg // 2  # 50% overlap
-        f, t, Sxx_noisy = spectrogram(noisy_signal, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
-        _, _, Sxx_noise = spectrogram(noise_profile, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
-        
-        # Step 2: Estimate the noise power spectrum (mean over time)
-        noise_power_spectrum = np.mean(Sxx_noise, axis=1)
-        
-        # Step 3: Align the noise power spectrum to match the frequency bins of noisy signal's spectrogram
-        if noise_power_spectrum.shape[0] != Sxx_noisy.shape[0]:
-            noise_power_spectrum = np.interp(f, f[:len(noise_power_spectrum)], noise_power_spectrum)
-        
-        # Step 4: Compute the magnitude and phase of the noisy signal's spectrogram
-        mag_noisy = np.abs(Sxx_noisy)
-        phase_noisy = np.angle(Sxx_noisy)
-        
-        # Spectral subtraction (magnitude)
-        mag_subtracted = mag_noisy - alpha * noise_power_spectrum[:, np.newaxis]
-        
-        # Apply floor to avoid negative magnitudes
-        mag_subtracted = np.maximum(mag_subtracted, floor)
-        
-        # Step 5: Optionally apply spectral smoothing to reduce sharp transitions
-        # Apply a simple moving average smoothing to the magnitudes
-        smoothing_window = 5
-        mag_subtracted = np.apply_along_axis(lambda x: np.convolve(x, np.ones(smoothing_window)/smoothing_window, mode='same'), axis=1, arr=mag_subtracted)
-        
-        # Step 6: Reconstruct the time-domain signal using ISTFT
-        Sxx_filtered = mag_subtracted * np.exp(1j * phase_noisy)
-        
-        # Apply ISTFT with the same nperseg and noverlap parameters to maintain consistent time resolution
-        _, filtered_signal = istft(Sxx_filtered, fs=sampling_rate, nperseg=nperseg, noverlap=noverlap)
-        
-        # Normalize the filtered signal to avoid very quiet output
-        filtered_signal = filtered_signal / np.max(np.abs(filtered_signal))  # Normalize to [-1, 1]
-        
-        return filtered_signal
+        return filtered_fft
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
