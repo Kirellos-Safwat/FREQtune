@@ -399,45 +399,41 @@ class EqualizerApp(QtWidgets.QMainWindow):
         hop_length = 320  # number of samples between fft windows
         
         f, t, Sxx = sg.spectrogram(data, fs=sampling_rate, nperseg=n_fft, noverlap=hop_length, nfft=n_fft)
-        decibel_spectrogram = 10 * np.log10(Sxx)   # convert to decibel
- 
+
+        max_amplitude = np.max(signal.freq_data[1][:])
+        max_amplitude = round(1000 * 2 * max_amplitude, 2)
+
+        zero_threshold = 1e-10
+        Sxx[Sxx < zero_threshold] = 0
+
+        if max_amplitude < 1:
+            epsilon = 1e-5
+            Sxx[Sxx > 0] = Sxx[Sxx > 0] + epsilon
+            decibel_spectrogram = 10 * np.log10(Sxx + zero_threshold)  # Add threshold to avoid log(0)
+            decibel_spectrogram = np.abs(decibel_spectrogram)
+        else:
+            decibel_spectrogram = 10 * np.log10(Sxx + zero_threshold)
+        
+        min_db = np.min(decibel_spectrogram[decibel_spectrogram > -np.inf])
+        decibel_spectrogram[decibel_spectrogram == -np.inf] = min_db
+
         fig = Figure()
         fig = Figure(figsize=(3, 3))
         fig.patch.set_alpha(0)  # make the figure background transparent
 
         ax = fig.add_subplot(111)
         ax.set_facecolor("none")
-        ax.tick_params(colors='gray')
-
-        max_amplitude = np.max(signal.freq_data[1][:])
-        max_amplitude = round(1000 * 2 * max_amplitude, 2)
+        ax.tick_params(colors='white')
 
         # Display the spectrogram with time on the x-axis and frequency on the y-axis
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                 extent=[t[0], t[-1], f[-1], f[0]])
 
-        # if max_amplitude == 0:
-        #     y_ticks = [0]  # Or any default
-        # else:
-        y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
 
-
-        cbar = fig.colorbar(cax, ax=ax, format='%.3f')
+        cbar = fig.colorbar(cax, ax=ax, ticks=[])
         cbar.set_label('Amplitude (dB)', color='white')
 
-        def custom_ticks(val, pos):
-            # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
-            return f'{val:.3f}'  # Customize this as needed
-        
-        cbar.ax.tick_params(labelsize=10, labelcolor='white')
-        cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
-
-        ax.tick_params(axis='x', labelcolor='white')  # Set x-tick labels to white
-        ax.tick_params(axis='y', labelcolor='white')
-
         ax.invert_yaxis()
-        # ax.set_ylabel("Frequency (Hz)", color='white')
-        # ax.set_xlabel("Time (s)", color='white')
 
         # Create the canvas for the plot and add it to the widget
         canvas = FigureCanvas(fig)
