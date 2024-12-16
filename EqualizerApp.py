@@ -395,24 +395,24 @@ class EqualizerApp(QtWidgets.QMainWindow):
             widget.itemAt(0).widget().setParent(None)
             
         data = samples.astype('float32')
-        n_fft = 500  # size of fft = window length
-        hop_length = 320  # number of samples between fft windows
+        # n_fft = 500  # size of fft = window length
+        # hop_length = 320  # number of samples between fft windows
         
-        f, t, Sxx = sg.spectrogram(data, fs=sampling_rate, nperseg=n_fft, noverlap=hop_length, nfft=n_fft)
+        f, t, amplitude = sg.spectrogram(data, fs=sampling_rate)
 
         max_amplitude = np.max(signal.freq_data[1][:])
         max_amplitude = round(1000 * 2 * max_amplitude, 2)
 
         zero_threshold = 1e-10
-        Sxx[Sxx < zero_threshold] = 0
+        amplitude[amplitude < zero_threshold] = 0
 
         if max_amplitude < 1:
             epsilon = 1e-5
-            Sxx[Sxx > 0] = Sxx[Sxx > 0] + epsilon
-            decibel_spectrogram = 10 * np.log10(Sxx + zero_threshold)  # Add threshold to avoid log(0)
+            amplitude[amplitude > 0] = amplitude[amplitude > 0] + epsilon
+            decibel_spectrogram = 10 * np.log10(amplitude + zero_threshold)  # Add threshold to avoid log(0)
             decibel_spectrogram = np.abs(decibel_spectrogram)
         else:
-            decibel_spectrogram = 10 * np.log10(Sxx + zero_threshold)
+            decibel_spectrogram = 10 * np.log10(amplitude + zero_threshold)
         
         min_db = np.min(decibel_spectrogram[decibel_spectrogram > -np.inf])
         decibel_spectrogram[decibel_spectrogram == -np.inf] = min_db
