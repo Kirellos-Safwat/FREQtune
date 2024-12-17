@@ -307,7 +307,31 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if self.current_signal is None:
             return
         signal = self.eqsignal if self.equalized_bool else self.current_signal
-        if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
+
+        if signal and self.selected_mode == 'weiner':
+            self.frequency_graph.setLabel('left', 'Magnitude (dB)')
+            if not self.linear_frequency_scale:  
+                self.frequency_graph.clear()
+                self.frequency_graph.setLogMode(x=True, y=False)
+                self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
+
+                ticks = [[(np.log10(250), '250'), (np.log10(500), '500'), (np.log10(1000), '1k'), (np.log10(2000), '2k'), (np.log10(4000), '4k')]]
+                self.frequency_graph.getAxis('bottom').setTicks(ticks)
+
+                # plot original frequency data
+                self.frequency_graph.plot(signal.freq_data[0][:],                   # array of freqs
+                                          signal.freq_data[1][:], pen={'color': 'r'})  # array of corresponding magnitudes
+
+            else:  # freq domain
+                self.frequency_graph.clear()
+                self.frequency_graph.setLabel('bottom', 'Frequency (Hz)')
+                self.frequency_graph.getAxis('bottom').setTicks(None)
+                self.frequency_graph.setLogMode(x=False, y=False)
+                self.frequency_graph.plot(signal.freq_data[0][:],              # array of freqs
+                                          signal.freq_data[1][:], pen={'color': 'b'})
+            
+            
+        elif signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             # get end index of last frequency range to know when to stop plotting
             if self.selected_mode != 'Uniform Range':
                 number_of_sliders = len(signal.Ranges)
@@ -370,7 +394,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
             
         for i in range(len(signal.Ranges)):
-            if self.selected_mode != 'Uniform Range':
+            if self.selected_mode == 'weiner':
+                break
+            elif self.selected_mode != 'Uniform Range':
                 for range_ in signal.Ranges[i]:
                     plot_ranges(*range_, i)
             else:
@@ -596,6 +622,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         #get the selected item's text and display it in the label
         self.selected_mode = self.modes_combobox.currentText()
         if self.selected_mode == 'weiner':
+            self.clear_layout(self.frame_layout)
             self.weiner()
             return
         # store the mode in a global variable
@@ -816,14 +843,16 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.weiner_window.filter_signal.connect(self.noise_reduction)
         
     def noise_reduction(self):
+        if self.current_signal is None:
+            return
+        self.equalized_bool = True
+        self.time_eq_signal.time = self.current_signal.time
         self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
-        # self.time_eq_signal.data = self.spectral_subtraction(self.weiner_window.noise_profile)
         excess = len(self.time_eq_signal.time) - len(self.time_eq_signal.data) #adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
-        self.equalized_bool = True
         self.Plot("equalized")  #plot equalized signal
-        self.plot_spectrogram(
-            self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
+        self.plot_freq()
+        self.plot_spectrogram(self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
         self.weiner_window.close()
     
     def wiener_filter(self):
