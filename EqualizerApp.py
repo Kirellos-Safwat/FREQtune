@@ -22,6 +22,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
 import os
 import sys
+from scipy.signal import spectrogram, istft
 from denoise import Denoise
 plt.use('Qt5Agg')
 
@@ -191,9 +192,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             Duration = librosa.get_duration(y=data, sr=sample_rate)
             time = np.linspace(0, Duration, len(data))
             self.audio_path = path
-        # else:
-        #     return
-        # elif it is a signal (ECG)
+        # elif it is a signal (ECG)    
         elif type_ == "csv":
             signal_data = pd.read_csv(path)
             time = np.array(signal_data.iloc[:, 0].astype(float).tolist())
@@ -202,6 +201,8 @@ class EqualizerApp(QtWidgets.QMainWindow):
                 sample_rate = 1 / (time[1]-time[0])
             else:
                 sample_rate = 1
+        else:
+            return
 
         # create "Signal" instance and set its attributes
         self.current_signal = SignalGenerator(signal_name, data=data,
@@ -325,7 +326,31 @@ class EqualizerApp(QtWidgets.QMainWindow):
         if self.current_signal is None:
             return
         signal = self.eqsignal if self.equalized_bool else self.current_signal
-        if signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
+
+        if signal and self.selected_mode == 'weiner':
+            self.frequency_graph.setLabel('left', 'Magnitude (dB)')
+            if not self.linear_frequency_scale:  
+                self.frequency_graph.clear()
+                self.frequency_graph.setLogMode(x=True, y=False)
+                self.frequency_graph.setLabel('bottom', 'Log(Frequency)')
+
+                ticks = [[(np.log10(250), '250'), (np.log10(500), '500'), (np.log10(1000), '1k'), (np.log10(2000), '2k'), (np.log10(4000), '4k')]]
+                self.frequency_graph.getAxis('bottom').setTicks(ticks)
+
+                # plot original frequency data
+                self.frequency_graph.plot(signal.freq_data[0][:],                   # array of freqs
+                                          signal.freq_data[1][:], pen={'color': 'r'})  # array of corresponding magnitudes
+
+            else:  # freq domain
+                self.frequency_graph.clear()
+                self.frequency_graph.setLabel('bottom', 'Frequency (Hz)')
+                self.frequency_graph.getAxis('bottom').setTicks(None)
+                self.frequency_graph.setLogMode(x=False, y=False)
+                self.frequency_graph.plot(signal.freq_data[0][:],              # array of freqs
+                                          signal.freq_data[1][:], pen={'color': 'b'})
+            
+            
+        elif signal and signal.Ranges:  # Check if signal is not None and signal.Ranges is not empty
             # get end index of last frequency range to know when to stop plotting
             if self.selected_mode != 'Uniform Range':
                 number_of_sliders = len(signal.Ranges)
@@ -390,7 +415,9 @@ class EqualizerApp(QtWidgets.QMainWindow):
             self.regions.append(region)
 
         for i in range(len(signal.Ranges)):
-            if self.selected_mode != 'Uniform Range':
+            if self.selected_mode == 'weiner':
+                break
+            elif self.selected_mode != 'Uniform Range':
                 for range_ in signal.Ranges[i]:
                     plot_ranges(*range_, i)
             else:
@@ -413,12 +440,27 @@ class EqualizerApp(QtWidgets.QMainWindow):
             widget.itemAt(0).widget().setParent(None)
 
         data = samples.astype('float32')
-        n_fft = 500  # size of fft = window length
-        hop_length = 320  # number of samples between fft windows
+        # n_fft = 500  # size of fft = window length
+        # hop_length = 320  # number of samples between fft windows
+        
+        f, t, amplitude = sg.spectrogram(data, fs=sampling_rate)
 
-        f, t, Sxx = sg.spectrogram(
-            data, fs=sampling_rate, nperseg=n_fft, noverlap=hop_length, nfft=n_fft)
-        decibel_spectrogram = 10 * np.log10(Sxx)   # convert to decibel
+        max_amplitude = np.max(signal.freq_data[1][:])
+        max_amplitude = round(1000 * 2 * max_amplitude, 2)
+
+        zero_threshold = 1e-10
+        amplitude[amplitude < zero_threshold] = 0
+
+        if max_amplitude < 1:
+            epsilon = 1e-5
+            amplitude[amplitude > 0] = amplitude[amplitude > 0] + epsilon
+            decibel_spectrogram = 10 * np.log10(amplitude + zero_threshold)  # Add threshold to avoid log(0)
+            decibel_spectrogram = np.abs(decibel_spectrogram)
+        else:
+            decibel_spectrogram = 10 * np.log10(amplitude + zero_threshold)
+        
+        min_db = np.min(decibel_spectrogram[decibel_spectrogram > -np.inf])
+        decibel_spectrogram[decibel_spectrogram == -np.inf] = min_db
 
         fig = Figure()
         fig = Figure(figsize=(3, 3))
@@ -426,36 +468,17 @@ class EqualizerApp(QtWidgets.QMainWindow):
 
         ax = fig.add_subplot(111)
         ax.set_facecolor("none")
-        ax.tick_params(colors='gray')
-
-        max_amplitude = np.max(signal.freq_data[1][:])
-        max_amplitude = round(1000 * 2 * max_amplitude, 2)
+        ax.tick_params(colors='white')
 
         # Display the spectrogram with time on the x-axis and frequency on the y-axis
         cax = ax.imshow(decibel_spectrogram, aspect='auto', cmap='viridis',
                         extent=[t[0], t[-1], f[-1], f[0]])
 
-        # if max_amplitude == 0:
-        #     y_ticks = [0]  # Or any default
-        # else:
-        # y_ticks = [i / 1000 for i in range(0, int(max_amplitude), max(1, int(max_amplitude / 10)))]
 
         cbar = fig.colorbar(cax, ax=ax, ticks=[])
         cbar.set_label('Amplitude (dB)', color='white')
 
-        # def custom_ticks(val, pos):
-        #     # Format the ticks to display as custom values (e.g., add a prefix or adjust units)
-        #     return f'{val:.3f}'  # Customize this as needed
-
-        # cbar.ax.tick_params(labelsize=10, labelcolor='white')
-        # cbar.ax.set_yticklabels([custom_ticks(i, None) for i in y_ticks])
-
-        # ax.tick_params(axis='x', labelcolor='white')  # Set x-tick labels to white
-        # ax.tick_params(axis='y', labelcolor='white')
-
         ax.invert_yaxis()
-        # ax.set_ylabel("Frequency (Hz)", color='white')
-        # ax.set_xlabel("Time (s)", color='white')
 
         # Create the canvas for the plot and add it to the widget
         canvas = FigureCanvas(fig)
@@ -620,6 +643,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         # get the selected item's text and display it in the label
         self.selected_mode = self.modes_combobox.currentText()
         if self.selected_mode == 'weiner':
+            self.clear_layout(self.frame_layout)
             self.weiner()
             return
         # store the mode in a global variable
@@ -838,33 +862,54 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.weiner_window.filter_signal.connect(self.noise_reduction)
 
     def noise_reduction(self):
+        if self.current_signal is None:
+            return
+        self.equalized_bool = True
+        self.time_eq_signal.time = self.current_signal.time
         self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
         excess = len(self.time_eq_signal.time) - \
             len(self.time_eq_signal.data)  # adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
-
-        self.Plot("equalized")  # plot equalized signal
-        self.plot_spectrogram(
-            self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
+        self.Plot("equalized")  #plot equalized signal
+        self.plot_freq()
+        self.plot_spectrogram(self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
         self.weiner_window.close()
-
+    
     def wiener_filter(self):
         # Compute FFT of signal and noise
         N = len(self.current_signal.data)
         signal_fft = self.current_signal.freq_data[1]
-        freq_amp = np.fft.fft(self.weiner_window.noise_profile, n=N)
-        noise_fft = (2/N)*(np.abs(freq_amp[:N//2]))
+
+        # freq_amp = np.fft.fft(self.weiner_window.noise_profile, n=N)
+        noise_fft = np.fft.fft(self.weiner_window.noise_profile, n=N)
+        noise_fft = (2/N) * (np.abs(noise_fft[:N//2]))
 
         # Compute power spectra
         signal_power = np.abs(signal_fft) ** 2
         noise_power = np.abs(noise_fft) ** 2
 
-        # Compute Wiener filter gain
-        # Avoid division by zero
-        gain = signal_power / (signal_power + noise_power + 1e-10)
-        filtered_fft = signal_fft * gain  # Apply gain to the signal spectrum
-        return filtered_fft
+        window_size = 25  # Adjust this value based on your needs
+        signal_power_smooth = np.convolve(signal_power, np.ones(window_size)/window_size, mode='same')
+        noise_power_smooth = np.convolve(noise_power, np.ones(window_size)/window_size, mode='same')
+        
+        # Compute SNR (Signal-to-Noise Ratio)
+        snr = signal_power_smooth / (noise_power_smooth + 1e-10)
+        
+        # Apply adaptive threshold
+        snr_threshold = 0.3  # Adjust this threshold based on your needs
+        gain = np.maximum(1 - 1/(snr + 1), 0)  # Modified Wiener filter gain
+        gain[snr < snr_threshold] *= 0.5  # Suppress frequencies with low SNR
+        
+        # Apply oversubtraction factor for noise reduction
+        alpha = 10.0  # Oversubtraction factor
+        gain = np.maximum(1 - alpha * (noise_power_smooth / (signal_power_smooth + 1e-10)), 0.1)
+        gain = np.tanh(gain)  # Smooth out the gain with a soft threshold
 
+        
+        # Apply the filter with frequency-dependent smoothing
+        filtered_fft = signal_fft * gain
+        
+        return filtered_fft
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

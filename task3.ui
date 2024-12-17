@@ -99,7 +99,7 @@ background : rgb(28, 29, 34)
                   <string notr="true"/>
                  </property>
                  <property name="text">
-                  <string>import</string>
+                  <string>Import</string>
                  </property>
                 </widget>
                </item>
