@@ -446,7 +446,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         f, t, amplitude = sg.spectrogram(data, fs=sampling_rate)
 
         max_amplitude = np.max(signal.freq_data[1][:])
-        max_amplitude = round(1000 * 2 * max_amplitude, 2)
+        max_amplitude = round(1000  * max_amplitude, 2)
 
         zero_threshold = 1e-10
         amplitude[amplitude < zero_threshold] = 0
@@ -866,7 +866,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
             return
         self.equalized_bool = True
         self.time_eq_signal.time = self.current_signal.time
-        self.time_eq_signal.data = self.recovered_signal(self.wiener_filter())
+        self.time_eq_signal.data = self.recovered_signal(self.weiner_filter())
         excess = len(self.time_eq_signal.time) - \
             len(self.time_eq_signal.data)  # adjust time signal length
         self.time_eq_signal.time = self.time_eq_signal.time[:-excess]
@@ -875,7 +875,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         self.plot_spectrogram(self.time_eq_signal.data, self.current_signal.sample_rate, self.spectrogram_after)
         self.weiner_window.close()
     
-    def wiener_filter(self):
+    def weiner_filter(self):
         # Compute FFT of signal and noise
         N = len(self.current_signal.data)
         signal_fft = self.current_signal.freq_data[1]
@@ -896,7 +896,7 @@ class EqualizerApp(QtWidgets.QMainWindow):
         snr = signal_power_smooth / (noise_power_smooth + 1e-10)
         
         # Apply adaptive threshold
-        snr_threshold = 0.3  # Adjust this threshold based on your needs
+        snr_threshold = 0.5  # Adjust this threshold based on your needs
         gain = np.maximum(1 - 1/(snr + 1), 0)  # Modified Wiener filter gain
         gain[snr < snr_threshold] *= 0.5  # Suppress frequencies with low SNR
         
