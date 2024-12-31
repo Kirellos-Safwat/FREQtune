@@ -25,6 +25,7 @@ The application supports multiple modes to cater to different use cases:
 
 #### c. **Vocal Mode**
 - Enables precise control over vocals (e.g., vowels) and musical instruments in a song.
+![Vocal](imgs/vocal.png)
 
 #### d. **Weiner Mode**
 - Implements noise filtering to clean up the signal.
